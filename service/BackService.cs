@@ -7,20 +7,22 @@ namespace Server.Service
 public class BackService : BackgroundService
 {
     private readonly ILogger<BackService> _logger;
-    int counter;
-    
-    public BackService(ILogger<BackService> logger)
+    private readonly VideoConfig _settings;
+   
+    public BackService(ILogger<BackService> logger, IOptions<VideoConfig> option)
     {
         _logger = logger;
-        _logger.LogDebug($" BackService is initial.");
-        // Constructor's parameters validations...
+        _settings = options.Value;
+
+        _logger.LogDebug($" BackService is initial");       
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug($"BackService is starting.");
+        _logger.LogDebug($"BackService is starting.");        
         
         
+
         stoppingToken.Register(() => _logger.LogDebug($"BackService background task is stopping."));
 
         while (!stoppingToken.IsCancellationRequested)
@@ -30,9 +32,9 @@ public class BackService : BackgroundService
             try
             {
                 // Ваша фоновая логика  
-               _logger.LogDebug($"counter = {counter++}");
+               
 
-                 await Task.Delay(10000, stoppingToken); // каждые 10 секунд
+                 await Task.Delay(1000, stoppingToken); // каждые 1 секунд
             }
             catch (OperationCanceledException)
             {

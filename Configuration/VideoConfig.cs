@@ -1,10 +1,9 @@
 
-namespace Track
+namespace Configuration.VideoConfig
 {
-    public class Config
+    public class VideoConfig
     {
         public string Dirlicens {  get; set; }
-        
         public bool RU { get; set; }
         public List<Input> Inputs { get; set; }
        
@@ -14,8 +13,7 @@ namespace Track
     {
         public int Id { get; set; }
         public bool Showvideo { get; set; }
-        public bool Simulate { get; set; }
-        
+        public bool Simulate { get; set; }        
         public string Dirlink { get; set; }
         public string Dirsave { get; set; }
         public string Dirlogs { get; set; }
