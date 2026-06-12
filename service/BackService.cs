@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Configuration.VideoConfig;
 
 namespace Server.Service
 {
@@ -22,7 +23,6 @@ public class BackService : BackgroundService
         _logger.LogDebug($"BackService is starting.");        
         
         
-
         stoppingToken.Register(() => _logger.LogDebug($"BackService background task is stopping."));
 
         while (!stoppingToken.IsCancellationRequested)
