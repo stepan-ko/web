@@ -1,0 +1,72 @@
+{
+    "Dirlicens": "G:/8. AngelVision/Licens",
+    "Dirlogs": "G:/8. AngelVision/logs",
+    "RU": true,
+    "Inputs": [
+        {
+            "Id": 1,
+            "Showvideo": true,
+            "Simulate" :  true,
+            "Dirlink": "G:/8. AngelVision/Video/12.mp4",
+            "Dirsave": "G:/8. AngelVision/Video/bestimg",
+            "Usecamera": true,
+            "Camera": 0,
+            "Option": {
+                "MinWidth": 80,
+                "MaxWidth": 400,
+                "MinWeight": 0.8,
+                "Tracking": true,
+                "NumberFrameForLose": 20,
+                "AreaFull": true,
+                "AreaX": 100,
+                "AreaY": 100,
+                "AreaWidth": 500,
+                "AreaHeight": 300
+            }
+        },
+        {
+            "Id": 2,
+            "Showvideo": true,
+            "Simulate": true,
+            "Dirlink": "G:/8. AngelVision/Video/12.mp4",
+            "Dirsave": "G:/8. AngelVision/Video/bestimg",
+            "Usecamera": false,
+            "Camera": 0,
+            "Option": {
+                "MinWidth": 80,
+                "MaxWidth": 400,
+                "MinWeight": 0.8,
+                "Tracking": true,
+                "NumberFrameForLose": 20,
+                "AreaFull": false,
+                "AreaX": 100,
+                "AreaY": 100,
+                "AreaWidth": 500,
+                "AreaHeight": 300
+            }
+        },
+        {
+            "Id": 3,
+            "Showvideo": true,
+            "Simulate": true,
+            "Dirlink": "G:/8. AngelVision/Video/12.mp4",
+            "Dirsave": "G:/8. AngelVision/Video/bestimg",
+            "Usecamera": false,
+            "Camera": 0,
+            "Option": {
+                "MinWidth": 80,
+                "MaxWidth": 400,
+                "MinWeight": 0.8,
+                "Tracking": true,
+                "NumberFrameForLose": 20,
+                "AreaFull": false,
+                "AreaX": 100,
+                "AreaY": 100,
+                "AreaWidth": 500,
+                "AreaHeight": 300
+            }
+        }
+    ]
+}
+
+ 
