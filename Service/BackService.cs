@@ -19,8 +19,7 @@ public class BackService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogDebug($"BackService is starting.");
-        
-        
+                
         stoppingToken.Register(() => _logger.LogDebug($"BackService background task is stopping."));
 
         while (!stoppingToken.IsCancellationRequested)
@@ -32,7 +31,7 @@ public class BackService : BackgroundService
                 // Ваша фоновая логика  
                _logger.LogDebug($"counter = {counter++}");
 
-                 await Task.Delay(10000, stoppingToken); // каждые 10 секунд
+                 await Task.Delay(50, stoppingToken); // каждые 10 секунд
             }
             catch (OperationCanceledException)
             {
