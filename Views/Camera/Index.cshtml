@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Camera Page";
+}
+
+@model List<Camera>
+
+<h2>Камеры</h2>
+
+<p>
+    <a asp-action="Create">Добавить камеру</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Название</th>
+            <th>RTSP</th>
+            <th>Включена</th>
+            <th>FPS</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var camera in Model)
+    {
+        <tr>
+            <td>@camera.Id</td>
+            <td>@camera.Name</td>
+            <td>@camera.StreamUrl</td>
+            <td>@camera.Simulate</td>
+            <td>@camera.Enable</td>
+            <td>
+                <a asp-action="Edit"
+                   asp-route-id="@camera.Id">
+                    Изменить
+                </a>
+
+                |
+
+                <a asp-action="Delete"
+                   asp-route-id="@camera.Id">
+                    Удалить
+                </a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
