@@ -7,5 +7,5 @@ public class AppDbContext : DbContext
     {
     }
 
-    public DbSet<VideoStream> Cameras => Set<VideoStream>();
+    public DbSet<Camera> Cameras => Set<Camera>();
 }
