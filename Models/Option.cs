@@ -1,5 +1,6 @@
 public class Option
     {
+        public int Id { get; set; }
         public int MinWidth { get; set; }
         public int MaxWidth { get; set; }
         public float MinWeight { get; set; }

@@ -29,9 +29,9 @@ public class BackService : BackgroundService
             try
             {
                 // Ваша фоновая логика  
-               _logger.LogDebug($"counter = {counter++}");
+            //    _logger.LogDebug($"counter = {counter++}");
 
-                 await Task.Delay(50, stoppingToken); // каждые 10 секунд
+                 await Task.Delay(10000, stoppingToken); // каждые 10 секунд
             }
             catch (OperationCanceledException)
             {
