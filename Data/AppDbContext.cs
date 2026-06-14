@@ -10,6 +10,8 @@ public class AppDbContext : DbContext
     public DbSet<Camera> Cameras => Set<Camera>();
     public DbSet<CameraOption> CameraOptions => Set<CameraOption>();
 
+   
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -18,5 +20,7 @@ public class AppDbContext : DbContext
             .HasOne(c => c.Option)
             .WithOne(o => o.Camera)
             .HasForeignKey<CameraOption>(o => o.CameraId);
+        
+         modelBuilder.Entity<CameraOption>().ToTable("CameraOptions");
     }
 }

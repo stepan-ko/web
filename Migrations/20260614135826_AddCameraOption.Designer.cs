@@ -10,8 +10,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace web.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260614123931_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260614135826_AddCameraOption")]
+    partial class AddCameraOption
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,9 +38,6 @@ namespace web.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("OptionId")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("Simulate")
                         .HasColumnType("boolean");
 
@@ -50,12 +47,10 @@ namespace web.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OptionId");
-
                     b.ToTable("Cameras");
                 });
 
-            modelBuilder.Entity("Option", b =>
+            modelBuilder.Entity("CameraOption", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -73,6 +68,9 @@ namespace web.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("AreaY")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CameraId")
                         .HasColumnType("integer");
 
                     b.Property<int>("MaxWidth")
@@ -95,18 +93,27 @@ namespace web.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Option");
+                    b.HasIndex("CameraId")
+                        .IsUnique();
+
+                    b.ToTable("CameraOptions", (string)null);
+                });
+
+            modelBuilder.Entity("CameraOption", b =>
+                {
+                    b.HasOne("Camera", "Camera")
+                        .WithOne("Option")
+                        .HasForeignKey("CameraOption", "CameraId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Camera");
                 });
 
             modelBuilder.Entity("Camera", b =>
                 {
-                    b.HasOne("Option", "Option")
-                        .WithMany()
-                        .HasForeignKey("OptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.Navigation("Option")
                         .IsRequired();
-
-                    b.Navigation("Option");
                 });
 #pragma warning restore 612, 618
         }

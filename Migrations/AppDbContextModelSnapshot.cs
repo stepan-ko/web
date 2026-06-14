@@ -93,7 +93,7 @@ namespace web.Migrations
                     b.HasIndex("CameraId")
                         .IsUnique();
 
-                    b.ToTable("CameraOption");
+                    b.ToTable("CameraOptions", (string)null);
                 });
 
             modelBuilder.Entity("CameraOption", b =>
