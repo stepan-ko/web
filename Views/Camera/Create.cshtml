@@ -1,0 +1,27 @@
+﻿@model CameraViewModel
+
+<h2>Создать камеру</h2>
+
+<form asp-action="Create" method="post">
+    <div>
+        <label>Название</label>
+        <input asp-for="Name" />
+    </div>
+
+    <div>
+        <label>Flhtc URL</label>
+        <input asp-for="StreamUrl" />
+    </div>
+
+    <div>
+        <label>Режим симуляции</label>
+        <input asp-for="Simulate" />
+    </div>
+
+    <div>
+        <label>Включить</label>
+        <input asp-for="Enable" type="checkbox" />
+    </div>
+
+    <button type="submit">Сохранить</button>
+</form>

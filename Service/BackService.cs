@@ -24,7 +24,7 @@ public class BackService : BackgroundService
 
         while (!stoppingToken.IsCancellationRequested)
         {
-             _logger.LogDebug($"BackService doing background work.");
+            //  _logger.LogDebug($"BackService doing background work.");
            
             try
             {
