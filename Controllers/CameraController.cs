@@ -38,7 +38,21 @@ public class CameraController : Controller
             Name = model.Name,
             StreamUrl = model.StreamUrl,
             Simulate = model.Simulate,
-            Enable = model.Enable
+            Enable = model.Enable,
+
+            Option = new CameraOption
+            {
+                MinWidth = model.Option.MinWidth,
+                MaxWidth = model.Option.MaxWidth,
+                MinWeight = model.Option.MinWeight,
+                Tracking = model.Option.Tracking,
+                NumberFrameForLose = model.Option.NumberFrameForLose,
+                UseArea = model.Option.UseArea,
+                AreaX = model.Option.AreaX,
+                AreaY = model.Option.AreaY,
+                AreaWidth = model.Option.AreaWidth,
+                AreaHeight = model.Option.AreaHeight
+            }       
         };
 
         await _cameraService.AddAsync(camera);

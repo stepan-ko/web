@@ -3,6 +3,7 @@
 <h2>Создать камеру</h2>
 
 <form asp-action="Create" method="post">
+
     <div>
         <label>Название</label>
         <input asp-for="Name" />
@@ -14,8 +15,8 @@
     </div>
 
     <div>
-        <label>Режим симуляции</label>
-        <input asp-for="Simulate" />
+        <label>Симуляция</label>
+        <input asp-for="Simulate" type="checkbox" />
     </div>
 
     <div>
@@ -23,5 +24,60 @@
         <input asp-for="Enable" type="checkbox" />
     </div>
 
+    <hr />
+
+    <h3>Настройки распознавания</h3>
+
+    <div>
+        <label>Min Width</label>
+        <input asp-for="Option.MinWidth" />
+    </div>
+
+    <div>
+        <label>Max Width</label>
+        <input asp-for="Option.MaxWidth" />
+    </div>
+
+    <div>
+        <label>Min Weight</label>
+        <input asp-for="Option.MinWeight" />
+    </div>
+
+    <div>
+        <label>Tracking</label>
+        <input asp-for="Option.Tracking" type="checkbox" />
+    </div>
+
+    <div>
+        <label>Frames to lose</label>
+        <input asp-for="Option.NumberFrameForLose" />
+    </div>
+
+    <div>
+        <label>Use Area</label>
+        <input asp-for="Option.UseArea" type="checkbox" />
+    </div>
+
+    <div>
+        <label>Area X</label>
+        <input asp-for="Option.AreaX" />
+    </div>
+
+    <div>
+        <label>Area Y</label>
+        <input asp-for="Option.AreaY" />
+    </div>
+
+    <div>
+        <label>Area Width</label>
+        <input asp-for="Option.AreaWidth" />
+    </div>
+
+    <div>
+        <label>Area Height</label>
+        <input asp-for="Option.AreaHeight" />
+    </div>
+
     <button type="submit">Сохранить</button>
+
 </form>
