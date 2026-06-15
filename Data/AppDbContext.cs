@@ -19,8 +19,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Camera>()
             .HasOne(c => c.Option)
             .WithOne(o => o.Camera)
-            .HasForeignKey<CameraOption>(o => o.CameraId);
-        
-         modelBuilder.Entity<CameraOption>().ToTable("CameraOptions");
+            .HasForeignKey<CameraOption>(o => o.CameraId)
+            .OnDelete(DeleteBehavior.Cascade);;
+
+        modelBuilder.Entity<CameraOption>().ToTable("CameraOptions");
     }
 }
