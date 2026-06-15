@@ -11,12 +11,14 @@ public class CameraService : ICameraService
 
     public async Task<List<Camera>> GetAllAsync()
     {
-        return await _db.Cameras.ToListAsync();
+        return await _db.Cameras.OrderBy(e => e.Id).ToListAsync();
     }
 
     public async Task<Camera?> GetByIdAsync(int id)
     {
-        return await _db.Cameras.FindAsync(id);
+        return await _db.Cameras
+            .Include(c => c.Option)
+            .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task AddAsync(Camera camera)

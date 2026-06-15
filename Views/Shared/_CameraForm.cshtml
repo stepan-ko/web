@@ -1,0 +1,80 @@
+@model CameraViewModel
+
+
+<div class="mb-3">
+    <label class="form-label">Название</label>
+    <input asp-for="Name" class="form-control" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Поток URL</label>
+    <input asp-for="StreamUrl" class="form-control" />
+</div>
+
+<div class="form-check mb-2">
+    <input asp-for="Simulate" class="form-check-input" />
+    <label class="form-check-label">Симуляция</label>
+</div>
+
+<div class="form-check mb-3">
+    <input asp-for="Enable" class="form-check-input" />
+    <label class="form-check-label">Включить</label>
+</div>
+
+<hr />
+
+<h4>Настройки распознавания</h4>
+
+<div class="row">
+
+    <div class="col-md-4 mb-2">
+        <label>Min Width</label>
+        <input asp-for="Option.MinWidth" class="form-control" />
+    </div>
+
+    <div class="col-md-4 mb-2">
+        <label>Max Width</label>
+        <input asp-for="Option.MaxWidth" class="form-control" />
+    </div>
+
+    <div class="col-md-4 mb-2">
+        <label>Min Weight</label>
+        <input asp-for="Option.MinWeight" class="form-control" />
+    </div>
+
+    <div class="col-md-4 form-check mt-2">
+        <input asp-for="Option.Tracking" class="form-check-input" />
+        <label class="form-check-label">Tracking</label>
+    </div>
+
+    <div class="col-md-4 mb-2">
+        <label>Frames to lose</label>
+        <input asp-for="Option.NumberFrameForLose" class="form-control" />
+    </div>
+
+    <div class="col-md-4 form-check mt-2">
+        <input asp-for="Option.UseArea" class="form-check-input" />
+        <label class="form-check-label">Use Area</label>
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label>X</label>
+        <input asp-for="Option.AreaX" class="form-control" />
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label>Y</label>
+        <input asp-for="Option.AreaY" class="form-control" />
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label>Width</label>
+        <input asp-for="Option.AreaWidth" class="form-control" />
+    </div>
+
+    <div class="col-md-3 mb-2">
+        <label>Height</label>
+        <input asp-for="Option.AreaHeight" class="form-control" />
+    </div>
+
+</div>

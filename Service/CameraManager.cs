@@ -66,7 +66,7 @@ public class CameraManager
             // 1. открыть поток
             // 2. получить кадр
             // 3. распознать номер
-            
+             
 
             await Task.Delay(100, token);
         }

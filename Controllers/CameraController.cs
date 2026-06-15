@@ -24,7 +24,7 @@ public class CameraController : Controller
     {
         return View();
     }
-
+    
     // POST: /Camera/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -59,4 +59,73 @@ public class CameraController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
+    // GET: /Camera/Edit
+    [HttpGet]
+    public async Task<IActionResult> Edit(int id)
+    {
+        var  camera = await _cameraService.GetByIdAsync(id);
+
+        if (camera == null)
+            return NotFound();
+
+        var model = new CameraViewModel
+        {
+            Id = camera.Id,
+            Name = camera.Name,
+            StreamUrl = camera.StreamUrl,
+            Simulate = camera.Simulate,
+            Enable = camera.Enable,
+
+            Option = new CameraOptionViewModel
+            {
+                MinWidth = camera.Option.MinWidth,
+                MaxWidth = camera.Option.MaxWidth,
+                MinWeight = camera.Option.MinWeight,
+                Tracking = camera.Option.Tracking,
+                NumberFrameForLose = camera.Option.NumberFrameForLose,
+                UseArea = camera.Option.UseArea,
+                AreaX = camera.Option.AreaX,
+                AreaY = camera.Option.AreaY,
+                AreaWidth = camera.Option.AreaWidth,
+                AreaHeight = camera.Option.AreaHeight
+            }
+        };
+
+        return View(model);
+    }
+
+    // POST: /Camera/Edit
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(CameraViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+       
+        var  camera = await _cameraService.GetByIdAsync(model.Id);
+
+       if (camera == null)
+        throw new Exception("Camera not found");
+
+        camera.Name = model.Name;
+        camera.StreamUrl = model.StreamUrl;
+        camera.Simulate = model.Simulate;
+        camera.Enable = model.Enable;
+
+        camera.Option.MinWidth = model.Option.MinWidth;
+        camera.Option.MaxWidth = model.Option.MaxWidth;
+        camera.Option.MinWeight = model.Option.MinWeight;
+        camera.Option.Tracking = model.Option.Tracking;
+        camera.Option.NumberFrameForLose = model.Option.NumberFrameForLose;
+        camera.Option.UseArea = model.Option.UseArea;
+        camera.Option.AreaX = model.Option.AreaX;
+        camera.Option.AreaY = model.Option.AreaY;
+        camera.Option.AreaWidth = model.Option.AreaWidth;
+        camera.Option.AreaHeight = model.Option.AreaHeight;
+
+        await _cameraService.UpdateAsync(camera);
+        return RedirectToAction(nameof(Index));
+    }
+
 }
