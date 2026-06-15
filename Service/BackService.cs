@@ -7,46 +7,42 @@ namespace Server.Service
 public class BackService : BackgroundService
 {
     private readonly ILogger<BackService> _logger;
-    int counter;
+    private readonly CameraManager _cameraManager;
     
-    public BackService(ILogger<BackService> logger)
+    public BackService(ILogger<BackService> logger, CameraManager cameraManager)
     {
         _logger = logger;
+        _cameraManager = cameraManager;
+
         _logger.LogDebug($" BackService is initial.");
         // Constructor's parameters validations...
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug($"BackService is starting.");
-                
-        stoppingToken.Register(() => _logger.LogDebug($"BackService background task is stopping."));
+        _logger.LogInformation("BackService starting...");
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            //  _logger.LogDebug($"BackService doing background work.");
-           
-            try
-            {
-                // Ваша фоновая логика  
-            //    _logger.LogDebug($"counter = {counter++}");
+        stoppingToken.Register(() =>
+            _logger.LogInformation("BackService stopping..."));
 
-                 await Task.Delay(10000, stoppingToken); // каждые 10 секунд
-            }
-            catch (OperationCanceledException)
-            {
-                // Обработка отмены
-                break;
-            }
-            catch (Exception ex)
-            {                
-                 _logger.LogDebug($"Ошибка: {ex.Message}");
-                await Task.Delay(30000, stoppingToken); // пауза на 30 сек после ошибки
-            }
+        try
+        {        
+            await _cameraManager.StartAsync(stoppingToken);
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
-        _logger.LogDebug($"BackService background task is stopping.");
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fatal error in BackService");
+        }
+
+        _logger.LogInformation("BackService stopped.");
     }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await _cameraManager.StopAsync();
+    }
+
+
 }
-
-
 }
