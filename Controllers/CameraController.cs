@@ -128,4 +128,18 @@ public class CameraController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var  camera = await _cameraService.GetByIdAsync(id);
+        if (camera == null)
+            NotFound();
+
+        await _cameraService.DeleteAsync(id);
+
+        return RedirectToAction(nameof(Index));
+    }
+    
+
 }
