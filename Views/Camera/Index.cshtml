@@ -35,12 +35,20 @@
                    asp-route-id="@camera.Id">
                     Изменить
                 </a>
-                |
+                |                
+                <form asp-action="Delete"
+                asp-route-id="@camera.Id"
+                method="post"
+                style="display:inline">
 
-                <a asp-action="Delete"
-                   asp-route-id="@camera.Id">
+                @Html.AntiForgeryToken()
+
+                <button type="submit"
+                        onclick="return confirm('Удалить камеру?')">
                     Удалить
-                </a>
+                </button>
+            </form>
+
             </td>
         </tr>
     }
