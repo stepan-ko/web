@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Newtonsoft.Json;
+
 
 namespace Track
 {
@@ -114,7 +114,7 @@ namespace Track
             try
             {
                 string json = File.ReadAllText(configPath);
-                conf = JsonConvert.DeserializeObject<Config>(json);
+                // conf = JsonConvert.DeserializeObject<Config>(json);
                 if (conf == null)
                 {
                     ExitConsole("Ошибка: не удалось распарсить config.json");

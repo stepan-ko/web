@@ -69,31 +69,19 @@ public class CameraManager
         
         try
         {  
-            Environment.SetEnvironmentVariable(
-                "OPENCV_FFMPEG_CAPTURE_OPTIONS",
-                "rtsp_transport;tcp|stimeout;5000000" ); 
-
-            using var capture = new VideoCapture(camera.StreamUrl,VideoCaptureAPIs.FFMPEG);             
-            // capture.Open(camera.StreamUrl);
+            
+              using var capture = new VideoCapture();             
+              capture.Open(camera.StreamUrl);
 
             // Console.WriteLine(camera.StreamUrl);
             // Console.WriteLine(Cv2.GetBuildInformation());
 
-            if (!capture.IsOpened())
-            {
-                var msg = $"Видеопоток {camera.Id}: '{camera.Name}' не может быть открыт";
-                _logger.LogError(msg);                
-                throw new Exception(msg);
-            }
-            else {               
-                 _logger.LogInformation($"Видеопоток {camera.Id}: '{camera.Name}'открыт");  
-            }
              
             while (!token.IsCancellationRequested)
             {
                 // 2. получить кадр
                 using var frame = new Mat();
-                capture.Read(frame);
+                
                 if (token.IsCancellationRequested) break;
                             
                 if (frame.Empty())
@@ -116,6 +104,7 @@ public class CameraManager
 
                 // 4. передать видео на страницу
                 Cv2.ImEncode(".jpg", frame, out var bytes);
+                
                 _frameBuffer.SetFrame(camera.Id, bytes);
 
                 // await Task.Delay(100, token);
