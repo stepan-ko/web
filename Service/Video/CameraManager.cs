@@ -110,8 +110,6 @@ public class CameraManager
                 Cv2.ImEncode(".jpg", frame, out var bytes);
                 _frameBuffer.SetFrame(camera.Id, bytes);
 
-                Console.WriteLine($"Frames in buffer: {frame != null}");
-            
                 // await Task.Delay(100, token);
             }
         }        
