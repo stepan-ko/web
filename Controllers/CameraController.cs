@@ -5,10 +5,12 @@ using web.Models;
 public class CameraController : Controller
 {
     private readonly ICameraService _cameraService;
+    private readonly CameraManager _cameraManager;
 
-    public CameraController(ICameraService cameraService)
+    public CameraController(ICameraService cameraService, CameraManager cameraManager)
     {
         _cameraService = cameraService;
+         _cameraManager = cameraManager;
     }
 
     public async Task<IActionResult> Index()
@@ -141,6 +143,44 @@ public class CameraController : Controller
 
         return RedirectToAction(nameof(Index));
     }
+
+    [HttpPost]
+    public async Task<IActionResult> Restart(int id)
+    {
+        var camera = await _cameraService.GetByIdAsync(id);
+
+        if (camera == null)
+            return NotFound();
+
+        await _cameraManager.RestartCamera(camera);
+
+        return RedirectToAction(nameof(Index));
+    }
     
+    [HttpPost]
+    public async Task<IActionResult> Stop(int id)
+    {
+        var camera = await _cameraService.GetByIdAsync(id);
+
+        if (camera == null)
+            return NotFound();
+
+        await _cameraManager.StopCamera(id);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+        [HttpPost]
+    public async Task<IActionResult> Start(int id)
+    {
+        var camera = await _cameraService.GetByIdAsync(id);
+
+        if (camera == null)
+            return NotFound();
+
+        _cameraManager.StartCamera(camera);
+
+        return RedirectToAction(nameof(Index));
+    }
 
 }

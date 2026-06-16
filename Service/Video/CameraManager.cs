@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using OpenCvSharp;
+using System.Collections.Concurrent;
 
 public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly FrameBuffer _frameBuffer;
     private readonly Dictionary<int, Task> _cameraTasks = new();
+    private readonly ConcurrentDictionary<int, CameraWorker> _workers = new();
     private CancellationTokenSource? _cts;
     private readonly ILogger<CameraManager> _logger;
     public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger, FrameBuffer buffer)
@@ -102,7 +104,6 @@ public class CameraManager
                 Cv2.Rectangle(frame, border, Scalar.Blue, 1);
                 }
 
-
                 // 3. распознать номер
                 
 
@@ -120,5 +121,69 @@ public class CameraManager
 
     }
 
-   
+    public void StartCamera(Camera camera)
+    {
+        if (_workers.TryGetValue(camera.Id, out var worker))
+        {
+            if (worker.IsRunning)
+                return;
+        }
+
+        var cts = new CancellationTokenSource();
+
+        worker = new CameraWorker
+        {
+            Camera = camera,
+            Cts = cts
+        };
+
+        worker.Task = Task.Run(async () =>
+        {
+            try
+            {
+                await ProcessCamera(camera, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                worker.LastError = ex.Message;
+                _logger.LogError(ex, "Camera error");
+            }
+        });
+
+        _workers[camera.Id] = worker;
+    }
+
+    public async Task StopCamera(int cameraId)
+    {
+        if (!_workers.TryGetValue(cameraId, out var worker))
+            return;
+        worker.Cts?.Cancel();
+        if (worker.Task != null)
+        {
+            try
+            {
+                await worker.Task;
+            }
+            catch
+            {
+            }
+        }
+        _workers.TryRemove(cameraId, out _);
+    }
+
+
+    public async Task RestartCamera(Camera camera)
+    {
+        await StopCamera(camera.Id);
+
+        StartCamera(camera);
+    }
+
+    public bool IsRunning(int cameraId)
+    {
+        return _workers.TryGetValue(cameraId, out var worker)
+            && worker.IsRunning;
+    }
+
+    
 }

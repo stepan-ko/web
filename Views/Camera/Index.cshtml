@@ -36,6 +36,19 @@
             <td>@camera.Simulate</td>
             <td>@camera.Enable</td>
             <td>
+                <form asp-action="Restart"
+                asp-route-id="@camera.Id"
+                method="post">
+
+                @Html.AntiForgeryToken()
+
+                <button class="btn btn-warning">
+                    Перезапустить
+                </button>
+            </form>
+            </td>
+            
+            <td>
                 <a asp-action="Edit"
                    asp-route-id="@camera.Id">
                     Изменить

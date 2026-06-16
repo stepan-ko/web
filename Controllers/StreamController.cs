@@ -39,7 +39,7 @@ public class StreamController : Controller
                 await Response.Body.FlushAsync();
             }
 
-            await Task.Delay(50);
+            // await Task.Delay(50);
         }
     }
 
