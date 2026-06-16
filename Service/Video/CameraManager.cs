@@ -78,7 +78,7 @@ public class CameraManager
                 else {
                     _logger.LogInformation($"Видеопоток '{camera.Name}' открыт");
                 }
-            // Console.WriteLine(camera.StreamUrl);
+             Console.WriteLine(camera.StreamUrl);
             // Console.WriteLine(Cv2.GetBuildInformation());
 
             // Console.WriteLine(Cv2.GetBuildInformation());
