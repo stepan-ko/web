@@ -64,7 +64,7 @@ public class CameraManager
         _logger.LogDebug($"Адрес видеопотока: {camera.StreamUrl}");         
          // 1. открыть поток
         
-
+        
         try
         {        
             using var capture = new VideoCapture();
@@ -76,49 +76,50 @@ public class CameraManager
                 _logger.LogError(msg);                
                 throw new Exception(msg);
             }
-            else {
-               
+            else {               
                  _logger.LogInformation($"Видеопоток {camera.Id}: '{camera.Name}'открыт");  
             }
-        }
-        catch (Exception ex) {_logger.LogError($"Ошибка видеопотока: {ex}");}
-           
-
-
-        while (!token.IsCancellationRequested)
-        {
-            // 2. получить кадр
-            using var frame = new Mat();
-            // capture.Read(frame);
-            if (token.IsCancellationRequested) break;
-                        
-            if (frame.Empty())
-            {
-                _logger.LogInformation($"Видеопоток #{camera.Id}: '{camera.Name}' завершился");
-                break;
-            }
-
-            if (token.IsCancellationRequested) break;
-
-            // Рисуем рамку Arae
-            if (camera.Option.UseArea)
-            {
-               Rect border = new Rect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight);
-               Cv2.Rectangle(frame, border, Scalar.Blue, 1);
-            }
-
-
-            // 3. распознать номер
              
+            while (!token.IsCancellationRequested)
+            {
+                // 2. получить кадр
+                using var frame = new Mat();
+                capture.Read(frame);
+                if (token.IsCancellationRequested) break;
+                            
+                if (frame.Empty())
+                {
+                    _logger.LogInformation($"Видеопоток #{camera.Id}: '{camera.Name}' завершился");
+                    break;
+                }
 
-            // 4. передать видео на страницу
-            Cv2.ImEncode(".jpg", frame, out var bytes);
-            _frameBuffer.SetFrame(camera.Id, bytes);
+                if (token.IsCancellationRequested) break;
+                
+                // Рисуем рамку Arae
+                if (camera.Option.UseArea)
+                {
+                Rect border = new Rect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight);
+                Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                }
 
-            Console.WriteLine($"Frames in buffer: {frame != null}");
-           
-            await Task.Delay(100, token);
+
+                // 3. распознать номер
+                
+
+                // 4. передать видео на страницу
+                Cv2.ImEncode(".jpg", frame, out var bytes);
+                _frameBuffer.SetFrame(camera.Id, bytes);
+
+                Console.WriteLine($"Frames in buffer: {frame != null}");
+            
+                // await Task.Delay(100, token);
+            }
+        }        
+        catch (Exception ex) 
+        {
+            _logger.LogError($"Ошибка видеопотока: {ex}");
         }
+
     }
 
    
