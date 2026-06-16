@@ -81,7 +81,7 @@ public class CameraManager
             {
                 // 2. получить кадр
                 using var frame = new Mat();
-                
+                capture.Read(frame);
                 if (token.IsCancellationRequested) break;
                             
                 if (frame.Empty())
