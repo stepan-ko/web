@@ -74,7 +74,7 @@ public class CameraManager
                 "rtsp_transport;tcp|stimeout;5000000" ); 
 
             using var capture = new VideoCapture(camera.StreamUrl,VideoCaptureAPIs.FFMPEG);             
-            capture.Open(camera.StreamUrl);
+            // capture.Open(camera.StreamUrl);
 
             // Console.WriteLine(camera.StreamUrl);
             // Console.WriteLine(Cv2.GetBuildInformation());
