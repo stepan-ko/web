@@ -26,7 +26,12 @@
     {
         <tr>
             <td>@camera.Id</td>
-            <td>@camera.Name</td>
+            <td>
+                <a asp-controller="Stream" asp-action="Details"
+                   asp-route-id="@camera.Id">
+                    @camera.Name
+                </a>                
+            </td>
             <td>@camera.StreamUrl</td>
             <td>@camera.Simulate</td>
             <td>@camera.Enable</td>

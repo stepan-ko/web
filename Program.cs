@@ -9,6 +9,7 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<ICameraService, CameraService>();
 builder.Services.AddSingleton<CameraManager>();
+builder.Services.AddSingleton<FrameBuffer>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {

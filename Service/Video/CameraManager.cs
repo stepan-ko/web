@@ -4,13 +4,14 @@ using OpenCvSharp;
 public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
-
+    private readonly FrameBuffer _frameBuffer;
     private readonly Dictionary<int, Task> _cameraTasks = new();
     private CancellationTokenSource? _cts;
     private readonly ILogger<CameraManager> _logger;
-    public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger)
+    public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger, FrameBuffer buffer)
     {
         _scopeFactory = scopeFactory;
+        _frameBuffer = buffer;
         _logger = logger;
     }
 
@@ -60,11 +61,15 @@ public class CameraManager
     private async Task ProcessCamera(Camera camera, CancellationToken token)
     {
         _logger.LogDebug($"Запуск обработки видео камеры: {camera.Name}");
-
-
+        _logger.LogDebug($"Адрес видеопотока: {camera.StreamUrl}");         
          // 1. открыть поток
+        
+
+        try
+        {        
             using var capture = new VideoCapture();
             capture.Open(camera.StreamUrl);
+
             if (!capture.IsOpened())
             {
                 var msg = $"Видеопоток {camera.Id}: '{camera.Name}' не может быть открыт";
@@ -75,13 +80,16 @@ public class CameraManager
                
                  _logger.LogInformation($"Видеопоток {camera.Id}: '{camera.Name}'открыт");  
             }
+        }
+        catch (Exception ex) {_logger.LogError($"Ошибка видеопотока: {ex}");}
+           
 
 
         while (!token.IsCancellationRequested)
         {
             // 2. получить кадр
             using var frame = new Mat();
-            capture.Read(frame);
+            // capture.Read(frame);
             if (token.IsCancellationRequested) break;
                         
             if (frame.Empty())
@@ -104,11 +112,14 @@ public class CameraManager
              
 
             // 4. передать видео на страницу
-           
+            Cv2.ImEncode(".jpg", frame, out var bytes);
+            _frameBuffer.SetFrame(camera.Id, bytes);
 
+            Console.WriteLine($"Frames in buffer: {frame != null}");
+           
             await Task.Delay(100, token);
         }
     }
 
-
+   
 }
