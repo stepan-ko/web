@@ -68,9 +68,16 @@ public class CameraManager
         
         
         try
-        {        
-            using var capture = new VideoCapture();
+        {  
+            Environment.SetEnvironmentVariable(
+                "OPENCV_FFMPEG_CAPTURE_OPTIONS",
+                "rtsp_transport;tcp|stimeout;5000000" ); 
+
+            using var capture = new VideoCapture(camera.StreamUrl,VideoCaptureAPIs.FFMPEG);             
             capture.Open(camera.StreamUrl);
+
+            // Console.WriteLine(camera.StreamUrl);
+            // Console.WriteLine(Cv2.GetBuildInformation());
 
             if (!capture.IsOpened())
             {
@@ -185,5 +192,5 @@ public class CameraManager
             && worker.IsRunning;
     }
 
-    
+
 }
