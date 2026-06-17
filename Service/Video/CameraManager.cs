@@ -69,18 +69,17 @@ public class CameraManager
         
         try
         {  
-            
-              using var capture = new VideoCapture();             
-              bool opened = capture.Open(camera.StreamUrl);
-                if (!opened) {
+                Console.WriteLine($">{camera.StreamUrl}<"); 
+                using var capture = new VideoCapture();
+
+                if (!capture.Open(camera.StreamUrl))
+                {               
                     _logger.LogError($"Видеопоток #{camera.Id}: '{camera.Name}' не открылся");
                 }
                 else {
                     _logger.LogInformation($"Видеопоток '{camera.Name}' открыт");
                 }
-             Console.WriteLine(camera.StreamUrl);
-            // Console.WriteLine(Cv2.GetBuildInformation());
-
+             
             // Console.WriteLine(Cv2.GetBuildInformation());
              
             while (!token.IsCancellationRequested)
