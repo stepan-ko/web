@@ -63,98 +63,125 @@ public class CameraManager
 
 
 
-    private async Task ProcessCamera(Camera camera, CancellationToken token)
+   private async Task ProcessCamera(Camera camera, CancellationToken token)
     {
         _logger.LogDebug($"Запуск обработки видео камеры: {camera.Name}");
-        _logger.LogDebug($"Адрес видеопотока: {camera.StreamUrl}");         
-         // 1. открыть поток
-        
-        
+        _logger.LogDebug($"Адрес видеопотока: {camera.StreamUrl}");
+
+        var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase)
+            ? "-rtsp_transport tcp "
+            : "";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            Arguments =
+                rtspOpt +
+                $"-re -i \"{camera.StreamUrl}\" " +
+                "-an -sn -dn " +
+                "-f image2pipe -vcodec mjpeg -q:v 4 " +
+                "-vf scale=1280:720 " +
+                "-",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        Process? process = null;
+
         try
-        {  
-                Console.WriteLine($">{camera.StreamUrl}<"); 
-               
-                var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase) ? "-rtsp_transport tcp " : "";
+        {
+            process = Process.Start(psi);
+            if (process == null)
+            {
+                _logger.LogError($"Не удалось запустить ffmpeg для камеры {camera.Name}");
+                return;
+            }
 
-                var psi = new ProcessStartInfo
+            // читаем stderr отдельно, иначе при заполнении буфера канала ffmpeg зависнет
+            _ = Task.Run(async () =>
+            {
+                try
                 {
-                    FileName = "ffmpeg",                    
-                    Arguments = 
-                        rtspOpt +
-                        $"-i \"{camera.StreamUrl}\" " +
-                        $"-an -sn -dn " +
-                        $"-f rawvideo " +
-                        $"-pix_fmt bgr24 " +
-                        $"-vf scale=1280:720 " +
-                        $"-", 
-                        RedirectStandardOutput = true, 
-                        RedirectStandardError = true, 
-                        UseShellExecute = false, 
-                        CreateNoWindow = true                    
-                };
-               
+                    string? line;
+                    while ((line = await process.StandardError.ReadLineAsync()) != null)
+                        _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
+                }
+                catch { /* процесс завершился — это нормально */ }
+            });
 
-            using var process = Process.Start(psi);
             var stream = process.StandardOutput.BaseStream;
-
-            int width = 1280;
-            int height = 720;
-            int frameSize = width * height * 3;
-
-            byte[] buffer = new byte[frameSize];
-
-
+            using var ms = new MemoryStream();
+            var chunk = new byte[8192];
 
             while (!token.IsCancellationRequested)
             {
-                // 2. получить кадр
-               
-                 int read = 0;
-                while (read < frameSize)
+                int n = await stream.ReadAsync(chunk, 0, chunk.Length, token);
+                if (n == 0)
                 {
-                    int r = stream.Read(buffer, read, frameSize - read);
-                    if (r == 0) break;
-                    read += r;
-                }
-
-                // if (read != frameSize)
-                //     continue;
-                if (read == 0)
-                {
-                    _logger.LogWarning("FFmpeg stream broken");
+                    _logger.LogWarning($"[{camera.Name}] FFmpeg stream broken");
                     break;
                 }
+                ms.Write(chunk, 0, n);
 
+                var data = ms.GetBuffer();
+                int len = (int)ms.Length;
 
-                // using var frame = Mat.FromImageData(buffer, ImreadModes.Color);
-               using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
+                int start = FindMarker(data, len, 0xFF, 0xD8, 0);
+                int end = start >= 0 ? FindMarker(data, len, 0xFF, 0xD9, start + 2) : -1;
 
-                if (token.IsCancellationRequested) break;
-                
-                // Рисуем рамку Arae
+                if (start < 0 || end <= start)
+                    continue;
+
+                int frameLen = end + 2 - start;
+                var jpegBytes = new byte[frameLen];
+                Array.Copy(data, start, jpegBytes, 0, frameLen);
+
+                using var frame = Cv2.ImDecode(jpegBytes, ImreadModes.Color);
+
                 if (camera.Option.UseArea)
                 {
-                Rect border = new Rect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight);
-                Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                    var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
+                                        camera.Option.AreaWidth, camera.Option.AreaHeight);
+                    Cv2.Rectangle(frame, border, Scalar.Blue, 1);
                 }
 
-                // 3. распознать номер
-                
+                Cv2.ImEncode(".jpg", frame, out var outBytes, new[] { (int)ImwriteFlags.JpegQuality, 80 });
+                _frameBuffer.SetFrame(camera.Id, outBytes);
 
-                // 4. передать видео на страницу
-                // Cv2.ImEncode(".jpg", frame, out var bytes);
-                Cv2.ImEncode(".jpg", frame, out var bytes, new int[] { (int)ImwriteFlags.JpegQuality, 80 });
-                
-                _frameBuffer.SetFrame(camera.Id, bytes);
-
-                // await Task.Delay(100, token);
+                // остаток после EOI переносим в начало буфера — там может быть начало следующего кадра
+                int restLen = len - (end + 2);
+                var rest = new byte[restLen];
+                Array.Copy(data, end + 2, rest, 0, restLen);
+                ms.SetLength(0);
+                ms.Write(rest, 0, restLen);
             }
-        }        
-        catch (Exception ex) 
-        {
-            _logger.LogError($"Ошибка видеопотока: {ex}");
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogDebug($"Обработка камеры {camera.Name} остановлена");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Ошибка видеопотока камеры {camera.Name}");
+        }
+        finally
+        {
+            if (process != null && !process.HasExited)
+            {
+                try { process.Kill(entireProcessTree: true); }
+                catch { /* процесс уже мог завершиться сам */ }
+            }
+            process?.Dispose();
+        }
+    }
 
+    static int FindMarker(byte[] buf, int len, byte b1, byte b2, int from)
+    {
+        for (int i = from; i < len - 1; i++)
+            if (buf[i] == b1 && buf[i + 1] == b2) return i;
+        return -1;
     }
 
     public void StartCamera(Camera camera)
