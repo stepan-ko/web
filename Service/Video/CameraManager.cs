@@ -72,6 +72,11 @@ public class CameraManager
             ? "-rtsp_transport tcp "
             : "";
 
+        const int width = 1280;
+        const int height = 720;
+        const int fps = 3; // частота кадров для распознавания/превью, можно вынести в camera.Option
+        int frameSize = width * height * 3; // bgr24 = 3 байта на пиксель
+
         var psi = new ProcessStartInfo
         {
             FileName = "ffmpeg",
@@ -79,8 +84,8 @@ public class CameraManager
                 rtspOpt +
                 $"-re -i \"{camera.StreamUrl}\" " +
                 "-an -sn -dn " +
-                "-f image2pipe -vcodec mjpeg -q:v 4 " +
-                "-vf scale=1280:720 " +
+                "-f rawvideo -pix_fmt bgr24 " +
+                $"-vf fps={fps},scale={width}:{height} " +
                 "-",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -112,33 +117,33 @@ public class CameraManager
             });
 
             var stream = process.StandardOutput.BaseStream;
-            using var ms = new MemoryStream();
-            var chunk = new byte[8192];
+            var buffer = new byte[frameSize];
 
             while (!token.IsCancellationRequested)
             {
-                int n = await stream.ReadAsync(chunk, 0, chunk.Length, token);
-                if (n == 0)
+                int read = 0;
+                while (read < frameSize)
+                {
+                    int r = await stream.ReadAsync(buffer, read, frameSize - read, token);
+                    if (r == 0) break;
+                    read += r;
+                }
+
+                if (read == 0)
                 {
                     _logger.LogWarning($"[{camera.Name}] FFmpeg stream broken");
                     break;
                 }
-                ms.Write(chunk, 0, n);
-
-                var data = ms.GetBuffer();
-                int len = (int)ms.Length;
-
-                int start = FindMarker(data, len, 0xFF, 0xD8, 0);
-                int end = start >= 0 ? FindMarker(data, len, 0xFF, 0xD9, start + 2) : -1;
-
-                if (start < 0 || end <= start)
+                if (read < frameSize)
+                {
+                    // неполный кадр в конце (например, поток только что обрвался) — пропускаем
+                    _logger.LogWarning($"[{camera.Name}] Получен неполный кадр: {read}/{frameSize} байт");
                     continue;
+                }
 
-                int frameLen = end + 2 - start;
-                var jpegBytes = new byte[frameLen];
-                Array.Copy(data, start, jpegBytes, 0, frameLen);
+                using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
 
-                using var frame = Cv2.ImDecode(jpegBytes, ImreadModes.Color);
+                //Тут обработка frame сторонней библиотекой поиска номера авто
 
                 if (camera.Option.UseArea)
                 {
@@ -147,15 +152,22 @@ public class CameraManager
                     Cv2.Rectangle(frame, border, Scalar.Blue, 1);
                 }
 
+                string fpsText = $"FPS: {fps}";
+
+                var font = HersheyFonts.HersheySimplex;
+                double fontScale = 0.7;
+                int thickness = 2;
+                int margin = 10;
+
+                var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
+
+                int x = frame.Width - textSize.Width - margin;
+                int y = margin + textSize.Height;
+
+                Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
+
                 Cv2.ImEncode(".jpg", frame, out var outBytes, new[] { (int)ImwriteFlags.JpegQuality, 80 });
                 _frameBuffer.SetFrame(camera.Id, outBytes);
-
-                // остаток после EOI переносим в начало буфера — там может быть начало следующего кадра
-                int restLen = len - (end + 2);
-                var rest = new byte[restLen];
-                Array.Copy(data, end + 2, rest, 0, restLen);
-                ms.SetLength(0);
-                ms.Write(rest, 0, restLen);
             }
         }
         catch (OperationCanceledException)
@@ -175,13 +187,6 @@ public class CameraManager
             }
             process?.Dispose();
         }
-    }
-
-    static int FindMarker(byte[] buf, int len, byte b1, byte b2, int from)
-    {
-        for (int i = from; i < len - 1; i++)
-            if (buf[i] == b1 && buf[i + 1] == b2) return i;
-        return -1;
     }
 
     public void StartCamera(Camera camera)

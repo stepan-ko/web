@@ -41,7 +41,9 @@ public class CameraController : Controller
             StreamUrl = model.StreamUrl,
             Simulate = model.Simulate,
             Enable = model.Enable,
-
+            Width = model.Width,
+            Height = model.Height,
+            Fps = model.Fps,
             Option = new CameraOption
             {
                 MinWidth = model.Option.MinWidth,
@@ -78,7 +80,9 @@ public class CameraController : Controller
             StreamUrl = camera.StreamUrl,
             Simulate = camera.Simulate,
             Enable = camera.Enable,
-
+            Width = camera.Width,
+            Height = camera.Height,
+            Fps = camera.Fps,
             Option = new CameraOptionViewModel
             {
                 MinWidth = camera.Option.MinWidth,
@@ -114,7 +118,9 @@ public class CameraController : Controller
         camera.StreamUrl = model.StreamUrl;
         camera.Simulate = model.Simulate;
         camera.Enable = model.Enable;
-
+        camera.Width = model.Width;
+        camera.Height = model.Height;
+        camera.Fps = model.Fps;
         camera.Option.MinWidth = model.Option.MinWidth;
         camera.Option.MaxWidth = model.Option.MaxWidth;
         camera.Option.MinWeight = model.Option.MinWeight;
