@@ -86,20 +86,19 @@ public class CameraManager
             // Console.WriteLine(Cv2.GetBuildInformation());
                 var psi = new ProcessStartInfo
                 {
-                    FileName = "ffmpeg",
-                    Arguments =
+                    FileName = "ffmpeg",                    
+                    Arguments = 
                         $"-rtsp_transport tcp " +
                         $"-i \"{camera.StreamUrl}\" " +
                         $"-an -sn -dn " +
                         $"-f rawvideo " +
                         $"-pix_fmt bgr24 " +
                         $"-vf scale=1280:720 " +
-                        $"-stream_loop -1" +
-                        $"-",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
+                        $"-", 
+                        RedirectStandardOutput = true, 
+                        RedirectStandardError = true, 
+                        UseShellExecute = false, 
+                        CreateNoWindow = true                    
                 };
 
             using var process = Process.Start(psi);
