@@ -72,10 +72,11 @@ public class CameraManager
             ? "-rtsp_transport tcp "
             : "";
 
-        const int width = 1280;
-        const int height = 720;
-        const int fps = 3; // частота кадров для распознавания/превью, можно вынести в camera.Option
+        int width = camera.Width != 0 ? camera.Width : 1280;
+        int height = camera.Height != 0 ? camera.Height : 720;
+        int fps = camera.Fps != 0 ? camera.Fps : 5; // частота кадров для распознавания/превью, можно вынести в camera.Option
         int frameSize = width * height * 3; // bgr24 = 3 байта на пиксель
+
 
         var psi = new ProcessStartInfo
         {
@@ -105,16 +106,16 @@ public class CameraManager
             }
 
             // читаем stderr отдельно, иначе при заполнении буфера канала ffmpeg зависнет
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    string? line;
-                    while ((line = await process.StandardError.ReadLineAsync()) != null)
-                        _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
-                }
-                catch { /* процесс завершился — это нормально */ }
-            });
+            // _ = Task.Run(async () =>
+            // {
+            //     try
+            //     {
+            //         string? line;
+            //         while ((line = await process.StandardError.ReadLineAsync()) != null)
+            //             _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
+            //     }
+            //     catch { /* процесс завершился — это нормально */ }
+            // });
 
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
