@@ -18,9 +18,16 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.9" />
   </ItemGroup>
 
-  <ItemGroup>
+<ItemGroup>
   <Content Include="12.mp4">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </Content>
+</ItemGroup>
+
+<ItemGroup>
+  <Content Include="av\*">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <TargetPath>%(Filename)%(Extension)</TargetPath>
   </Content>
 </ItemGroup>
 
