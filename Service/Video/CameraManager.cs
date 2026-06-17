@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenCvSharp;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 public class CameraManager
 {
@@ -60,6 +61,8 @@ public class CameraManager
             .ToListAsync();
     }
 
+
+
     private async Task ProcessCamera(Camera camera, CancellationToken token)
     {
         _logger.LogDebug($"Запуск обработки видео камеры: {camera.Name}");
@@ -70,30 +73,78 @@ public class CameraManager
         try
         {  
                 Console.WriteLine($">{camera.StreamUrl}<"); 
-                using var capture = new VideoCapture();
+                // using var capture = new VideoCapture();
 
-                if (!capture.Open(camera.StreamUrl))
-                {               
-                    _logger.LogError($"Видеопоток #{camera.Id}: '{camera.Name}' не открылся");
-                }
-                else {
-                    _logger.LogInformation($"Видеопоток '{camera.Name}' открыт");
-                }
+                // if (!capture.Open(camera.StreamUrl))
+                // {               
+                //     _logger.LogError($"Видеопоток #{camera.Id}: '{camera.Name}' не открылся");
+                // }
+                // else {
+                //     _logger.LogInformation($"Видеопоток '{camera.Name}' открыт");
+                // }
              
             // Console.WriteLine(Cv2.GetBuildInformation());
-             
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "ffmpeg",
+                    Arguments =
+                        $"-rtsp_transport tcp " +
+                        $"-i \"{camera.StreamUrl}\" " +
+                        $"-an -sn -dn " +
+                        $"-f rawvideo " +
+                        $"-pix_fmt bgr24 " +
+                        $"-vf scale=1280:720 " +
+                        $"-stream_loop -1" +
+                        $"-",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+            using var process = Process.Start(psi);
+            var stream = process.StandardOutput.BaseStream;
+
+            int width = 1280;
+            int height = 720;
+            int frameSize = width * height * 3;
+
+            byte[] buffer = new byte[frameSize];
+
+
+
             while (!token.IsCancellationRequested)
             {
                 // 2. получить кадр
-                using var frame = new Mat();
-                capture.Read(frame);
-                if (token.IsCancellationRequested) break;
+                // using var frame = new Mat();
+                // capture.Read(frame);
+                // if (token.IsCancellationRequested) break;
                             
-                if (frame.Empty())
+                // if (frame.Empty())
+                // {
+                //     _logger.LogInformation($"Видеопоток #{camera.Id}: '{camera.Name}' завершился");
+                //     break;
+                // }
+
+                 int read = 0;
+                while (read < frameSize)
                 {
-                    _logger.LogInformation($"Видеопоток #{camera.Id}: '{camera.Name}' завершился");
+                    int r = stream.Read(buffer, read, frameSize - read);
+                    if (r == 0) break;
+                    read += r;
+                }
+
+                // if (read != frameSize)
+                //     continue;
+                if (read == 0)
+                {
+                    _logger.LogWarning("FFmpeg stream broken");
                     break;
                 }
+
+
+                // using var frame = Mat.FromImageData(buffer, ImreadModes.Color);
+               using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
 
                 if (token.IsCancellationRequested) break;
                 
@@ -108,7 +159,8 @@ public class CameraManager
                 
 
                 // 4. передать видео на страницу
-                Cv2.ImEncode(".jpg", frame, out var bytes);
+                // Cv2.ImEncode(".jpg", frame, out var bytes);
+                Cv2.ImEncode(".jpg", frame, out var bytes, new int[] { (int)ImwriteFlags.JpegQuality, 80 });
                 
                 _frameBuffer.SetFrame(camera.Id, bytes);
 
