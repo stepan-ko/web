@@ -73,22 +73,14 @@ public class CameraManager
         try
         {  
                 Console.WriteLine($">{camera.StreamUrl}<"); 
-                // using var capture = new VideoCapture();
+               
+                var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase) ? "-rtsp_transport tcp " : "";
 
-                // if (!capture.Open(camera.StreamUrl))
-                // {               
-                //     _logger.LogError($"Видеопоток #{camera.Id}: '{camera.Name}' не открылся");
-                // }
-                // else {
-                //     _logger.LogInformation($"Видеопоток '{camera.Name}' открыт");
-                // }
-             
-            // Console.WriteLine(Cv2.GetBuildInformation());
                 var psi = new ProcessStartInfo
                 {
                     FileName = "ffmpeg",                    
                     Arguments = 
-                        $"-rtsp_transport tcp " +
+                        rtspOpt +
                         $"-i \"{camera.StreamUrl}\" " +
                         $"-an -sn -dn " +
                         $"-f rawvideo " +
@@ -100,6 +92,7 @@ public class CameraManager
                         UseShellExecute = false, 
                         CreateNoWindow = true                    
                 };
+               
 
             using var process = Process.Start(psi);
             var stream = process.StandardOutput.BaseStream;
@@ -115,16 +108,7 @@ public class CameraManager
             while (!token.IsCancellationRequested)
             {
                 // 2. получить кадр
-                // using var frame = new Mat();
-                // capture.Read(frame);
-                // if (token.IsCancellationRequested) break;
-                            
-                // if (frame.Empty())
-                // {
-                //     _logger.LogInformation($"Видеопоток #{camera.Id}: '{camera.Name}' завершился");
-                //     break;
-                // }
-
+               
                  int read = 0;
                 while (read < frameSize)
                 {
