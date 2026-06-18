@@ -3,6 +3,7 @@ using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
+
 public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
@@ -120,6 +121,8 @@ public class CameraManager
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
 
+            CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
+
             while (!token.IsCancellationRequested)
             {
                 int read = 0;
@@ -146,8 +149,8 @@ public class CameraManager
 
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
                 if (!camera.Simulate)
-                {
-                    
+                {                    
+                    cameraRecognize.RecognizePlate(frame);
                 }
 
 

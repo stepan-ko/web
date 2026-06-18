@@ -70,4 +70,6 @@ internal static class BmpFrameReader
     {
         return (value + 3) / 4 * 4;
     }
+
+    
 }

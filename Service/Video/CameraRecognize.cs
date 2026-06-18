@@ -1,6 +1,7 @@
-using av.AngelVisionLpr;
-using av.Imaging;
+using web.av.AngelVisionLpr;
+using web.av.Imaging;
 using OpenCvSharp;
+
 
 public class CameraRecognize
 {
@@ -16,6 +17,7 @@ public class CameraRecognize
                 // Глобальная настройка SDK: сколько рабочих потоков может использовать распознавание.
                 NativeMethods.SetNumberOfThreads(countThreads);
             }
+            
             return true;
         }
         catch (DllNotFoundException exception)
@@ -30,41 +32,40 @@ public class CameraRecognize
             return false;
         } 
     }
+
     private ulong FrameId = 1;
-    private readonly ILogger<CameraRecognize> _logger;
+    private readonly ILogger<CameraManager> _logger;
 
-    public CameraRecognize(ILogger<CameraRecognize> logger)
+    public CameraRecognize(Camera camera, ILogger<CameraManager> logger)
     {
-        _logger = logger;        
-    }
+        _logger = logger;   
 
-    internal void RecognizePlate(Camera camera, Mat frame, AitAvOptions options)
+        var options = new AitAvOptions
+        {
+            Type = TypeRecognizer.CldDnn,
+            Tracking = camera.Option.Tracking,
+            FramesBeforeLosing = camera.Option.NumberFrameForLose,
+            MinPlateWidth = camera.Option.MinPlateWidth,
+            MaxPlateWidth = camera.Option.MaxPlateWidth,
+            MinProbability = camera.Option.MinProbability,
+            Area = camera.Option.UseArea ? 
+            new AitRect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight) : 
+            new AitRect(0, 0, camera.Width, camera.Height)
+        };
+
+        recognizer = new LprRecognizer(options);    
+
+    }
+    private LprRecognizer recognizer;
+
+    public void RecognizePlate(Mat frame)
     {
         try
         {           
+            using var bmpFrame = BmpFrameConverter.FromMat(frame);
+            using var pinnedFrame = PinnedFrame.Pin(bmpFrame);
+            using var plateBuffer = recognizer.Recognize(pinnedFrame.Image, FrameId, "");   
             
-            // var options = new AitAvOptions
-            // {
-            //     Type = arguments.Type,
-            //     Tracking = arguments.Tracking,
-            //     FramesBeforeLosing = arguments.FramesBeforeLosing,
-            //     MinPlateWidth = arguments.MinPlateWidth,
-            //     MaxPlateWidth = arguments.MaxPlateWidth,
-            //     MinProbability = arguments.MinProbability,
-            //     Area = arguments.Area ?? new AitRect(0, 0, frame.Width, frame.Height)
-            // };
-
-            using var recognizer = new LprRecognizer(options);
-
-            // Данные кадра должны оставаться по одному и тому же адресу в памяти на время native-вызова.
-            // Поэтому managed byte[] фиксируется через GCHandle и освобождается сразу после Recognize.
-            using var pinnedFrame = PinnedFrame.Pin(frame);
-            
-            using var plateBuffer = recognizer.Recognize(pinnedFrame.Image, FrameId);   
-            
-            PlateBuffer
-            PinnedFrame
-
             var found = false;
 
             foreach (var plate in plateBuffer.PopAll())
