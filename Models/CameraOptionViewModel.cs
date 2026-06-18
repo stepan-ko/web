@@ -1,8 +1,8 @@
 public class CameraOptionViewModel
 {
-    public int MinWidth { get; set; }
-    public int MaxWidth { get; set; }
-    public float MinWeight { get; set; }
+    public int MinPlateWidth { get; set; }
+    public int MaxPlateWidth { get; set; }
+    public double MinProbability { get; set; }
 
     public bool Tracking { get; set; }
     public int NumberFrameForLose { get; set; }

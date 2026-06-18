@@ -120,8 +120,8 @@ public class CameraManager
 
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
-
-            CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
+           
+           CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
 
             while (!token.IsCancellationRequested)
             {
@@ -148,8 +148,9 @@ public class CameraManager
                 using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
 
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
+               
                 if (!camera.Simulate)
-                {                    
+                {    
                     cameraRecognize.RecognizePlate(frame);
                 }
 

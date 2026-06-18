@@ -40,6 +40,7 @@ public class CameraRecognize
     {
         _logger = logger;   
 
+        _logger.LogDebug("START CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
         var options = new AitAvOptions
         {
             Type = TypeRecognizer.CldDnn,
@@ -52,9 +53,9 @@ public class CameraRecognize
             new AitRect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight) : 
             new AitRect(0, 0, camera.Width, camera.Height)
         };
-
+        _logger.LogDebug("MIDDLE CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
         recognizer = new LprRecognizer(options);    
-
+        _logger.LogDebug("END CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
     }
     private LprRecognizer recognizer;
 

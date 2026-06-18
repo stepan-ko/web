@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,10 +28,26 @@
 </ItemGroup>
 
 <ItemGroup>
-  <Content Include="av\*">
+  <Content Include="av/license/*">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <TargetPath>linux-x64/%(Filename)%(Extension)</TargetPath>
+  </Content>
+</ItemGroup>
+
+<ItemGroup>
+  <None Include="av/lib/*">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <TargetPath>runtimes/linux-x64/native/%(Filename)%(Extension)</TargetPath>
+  </None>
+</ItemGroup>
+
+<ItemGroup>
+  <Content Include="av/lib/*">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     <TargetPath>%(Filename)%(Extension)</TargetPath>
   </Content>
 </ItemGroup>
+
+
 
 </Project>

@@ -46,9 +46,9 @@ public class CameraController : Controller
             Fps = model.Fps,
             Option = new CameraOption
             {
-                MinWidth = model.Option.MinWidth,
-                MaxWidth = model.Option.MaxWidth,
-                MinWeight = model.Option.MinWeight,
+                MinPlateWidth = model.Option.MinPlateWidth,
+                MaxPlateWidth = model.Option.MaxPlateWidth,
+                MinProbability = model.Option.MinProbability,
                 Tracking = model.Option.Tracking,
                 NumberFrameForLose = model.Option.NumberFrameForLose,
                 UseArea = model.Option.UseArea,
@@ -85,9 +85,9 @@ public class CameraController : Controller
             Fps = camera.Fps,
             Option = new CameraOptionViewModel
             {
-                MinWidth = camera.Option.MinWidth,
-                MaxWidth = camera.Option.MaxWidth,
-                MinWeight = camera.Option.MinWeight,
+                MinPlateWidth = camera.Option.MinPlateWidth,
+                MaxPlateWidth = camera.Option.MaxPlateWidth,
+                MinProbability = camera.Option.MinProbability,
                 Tracking = camera.Option.Tracking,
                 NumberFrameForLose = camera.Option.NumberFrameForLose,
                 UseArea = camera.Option.UseArea,
@@ -121,9 +121,9 @@ public class CameraController : Controller
         camera.Width = model.Width;
         camera.Height = model.Height;
         camera.Fps = model.Fps;
-        camera.Option.MinWidth = model.Option.MinWidth;
-        camera.Option.MaxWidth = model.Option.MaxWidth;
-        camera.Option.MinWeight = model.Option.MinWeight;
+        camera.Option.MinPlateWidth = model.Option.MinPlateWidth;
+        camera.Option.MaxPlateWidth = model.Option.MaxPlateWidth;
+        camera.Option.MinProbability = model.Option.MinProbability;
         camera.Option.Tracking = model.Option.Tracking;
         camera.Option.NumberFrameForLose = model.Option.NumberFrameForLose;
         camera.Option.UseArea = model.Option.UseArea;
