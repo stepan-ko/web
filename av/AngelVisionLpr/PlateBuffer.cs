@@ -1,4 +1,4 @@
-namespace AngelVisionLpr;
+namespace web.av.AngelVisionLpr;
 
 internal sealed class PlateBuffer : IDisposable
 {

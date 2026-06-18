@@ -144,7 +144,12 @@ public class CameraManager
 
                 using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
 
-                //Тут обработка frame сторонней библиотекой поиска номера авто
+                //Тут обработка frame сторонней библиотекой поиска номера авто 
+                if (!camera.Simulate)
+                {
+                    
+                }
+
 
                 if (camera.Option.UseArea)
                 {

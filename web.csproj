@@ -19,8 +19,9 @@
   </ItemGroup>
 
 <ItemGroup>
-  <Content Include="12.mp4">
+  <Content Include="Tests/file/*">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <TargetPath>%(Filename)%(Extension)</TargetPath>
   </Content>
 </ItemGroup>
 

@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AngelVisionLpr;
+namespace web.av.AngelVisionLpr;
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct AitAvPlateData

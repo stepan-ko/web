@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace AngelVisionLpr;
+namespace web.av.AngelVisionLpr;
 
 internal static class NativeLibraryLoader
 {
