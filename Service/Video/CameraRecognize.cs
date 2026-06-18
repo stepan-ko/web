@@ -34,13 +34,13 @@ public class CameraRecognize
     }
 
     private ulong FrameId = 1;
+    private ulong CountRecognize = 1;
     private readonly ILogger<CameraManager> _logger;
 
     public CameraRecognize(Camera camera, ILogger<CameraManager> logger)
     {
         _logger = logger;   
 
-        _logger.LogDebug("START CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
         var options = new AitAvOptions
         {
             Type = TypeRecognizer.CldDnn,
@@ -53,26 +53,29 @@ public class CameraRecognize
             new AitRect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight) : 
             new AitRect(0, 0, camera.Width, camera.Height)
         };
-        _logger.LogDebug("MIDDLE CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
         recognizer = new LprRecognizer(options);    
-        _logger.LogDebug("END CameraRecognize(Camera camera, ILogger<CameraManager> logger)");
+       
     }
     private LprRecognizer recognizer;
 
-    public void RecognizePlate(Mat frame)
+    public List<Rect> RecognizePlate(Mat frame)
     {
+        List<Rect> plateBorder = new List<Rect>();
         try
         {           
+           
+
             using var bmpFrame = BmpFrameConverter.FromMat(frame);
             using var pinnedFrame = PinnedFrame.Pin(bmpFrame);
-            using var plateBuffer = recognizer.Recognize(pinnedFrame.Image, FrameId, "");   
-            
-            var found = false;
-
+            using var plateBuffer = recognizer.Recognize(pinnedFrame.Image, FrameId++, "");   
+                
             foreach (var plate in plateBuffer.PopAll())
-            {
-                found = true;               
+            {                
+
+                plateBorder.Add(new Rect(plate.Data.Position.X,plate.Data.Position.Y, plate.Data.Position.Width, plate.Data.Position.Height));
+
                 _logger.LogInformation($"Кадр: {FrameId} - Номер:");
+                _logger.LogInformation($"Всего Кадров распознано: {CountRecognize++}");                
                 _logger.LogInformation($"State: {plate.State}");
                 _logger.LogInformation($"Номер: {plate.Data.PlateText}");
                 _logger.LogInformation($"Country: {plate.Country}");
@@ -84,17 +87,15 @@ public class CameraRecognize
 
                 PlateNativeMemory.ReleaseOwnedBuffers(plate);
             }
-
-            if (!found)
-            {
-                _logger.LogInformation($"Кадр: {FrameId} - Номера не найдены");
-            }
-        }
-       
+            return plateBorder;
+        }       
         catch (Exception exception)
         {
-            Console.Error.WriteLine(exception);            
-        }    
+            Console.Error.WriteLine(exception); 
+
+            return plateBorder;           
+        }   
+
     }
 
 

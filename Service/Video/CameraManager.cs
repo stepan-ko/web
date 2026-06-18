@@ -36,6 +36,9 @@ public class CameraManager
         if (_cameraTasks.ContainsKey(camera.Id))
             return;
 
+        if (!camera.Enable)
+            return;
+
         var task = Task.Run(() => ProcessCamera(camera, token), token);
 
         _cameraTasks[camera.Id] = task;
@@ -121,7 +124,7 @@ public class CameraManager
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
            
-        //    CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
+           CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
 
             while (!token.IsCancellationRequested)
             {
@@ -149,10 +152,15 @@ public class CameraManager
 
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
                
-                // if (!camera.Simulate)
-                // {    
-                //     cameraRecognize.RecognizePlate(frame);
-                // }
+                if (!camera.Simulate)
+                {  
+                   List<Rect> plates = cameraRecognize.RecognizePlate(frame);
+
+                   foreach (var plate in plates)
+                    {                        
+                        Cv2.Rectangle(frame, plate, Scalar.Yellow, 2);
+                    }            
+                }
 
 
                 if (camera.Option.UseArea)
