@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace AngelVisionLprDemo.AngelVisionLpr;
+namespace AngelVisionLpr;
 
 internal static class NativeMethods
 {

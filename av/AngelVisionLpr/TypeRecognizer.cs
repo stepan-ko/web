@@ -1,4 +1,4 @@
-namespace AngelVisionLprDemo.AngelVisionLpr;
+namespace AngelVisionLpr;
 
 internal enum TypeRecognizer
 {
