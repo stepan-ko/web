@@ -73,17 +73,19 @@ public class CameraRecognize
             {                
 
                 plateBorder.Add(new Rect(plate.Data.Position.X,plate.Data.Position.Y, plate.Data.Position.Width, plate.Data.Position.Height));
-
-                _logger.LogInformation($"Кадр: {FrameId} - Номер:");
-                _logger.LogInformation($"Всего Кадров распознано: {CountRecognize++}");                
-                _logger.LogInformation($"State: {plate.State}");
-                _logger.LogInformation($"Номер: {plate.Data.PlateText}");
-                _logger.LogInformation($"Country: {plate.Country}");
-                _logger.LogInformation($"Probability: {plate.Data.Probability:P1}");
-                _logger.LogInformation($"Object id: {plate.Data.Identifier}");
-                _logger.LogInformation($"Frame id: {plate.FrameId}");
-                _logger.LogInformation($"Rect: x={plate.Data.Position.X}, y={plate.Data.Position.Y}, w={plate.Data.Position.Width}, h={plate.Data.Position.Height}");
-                _logger.LogInformation("");
+                
+                string msg = $"Кадр: {FrameId}" + Environment.NewLine +
+                                        $"Всего Кадров распознано: {CountRecognize++}" + Environment.NewLine +                
+                                        $"State: {plate.State}"+ Environment.NewLine +
+                                        $"Номер: {plate.Data.PlateText}" + Environment.NewLine +
+                                        $"Country: {plate.Country}"+ Environment.NewLine +
+                                        $"Probability: {plate.Data.Probability:P1}"+ Environment.NewLine +
+                                        $"Object id: {plate.Data.Identifier}"+ Environment.NewLine +
+                                        $"Frame id: {plate.FrameId}"+ Environment.NewLine +
+                                        $"Rect: x={plate.Data.Position.X}, y={plate.Data.Position.Y}, w={plate.Data.Position.Width}, h={plate.Data.Position.Height}" + Environment.NewLine;
+                
+                _logger.LogInformation(msg);
+                
 
                 PlateNativeMemory.ReleaseOwnedBuffers(plate);
             }
