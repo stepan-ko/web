@@ -9,7 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Camera> Cameras => Set<Camera>();
     public DbSet<CameraOption> CameraOptions => Set<CameraOption>();
-    public DbSet<RecognizeTrack> RecognizeTracks => Set<RecognizeTrack>();
+    public DbSet<TrackRecognize> RecognizeTracks => Set<TrackRecognize>();
    
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -24,7 +24,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<CameraOption>().ToTable("CameraOptions");
 
-        modelBuilder.Entity<RecognizeTrack>(entity =>
+        modelBuilder.Entity<TrackRecognize>(entity =>
         {
             entity.ToTable("RecognizeTracks");
 
