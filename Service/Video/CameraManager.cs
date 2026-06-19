@@ -192,7 +192,7 @@ public class CameraManager
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), token);
+                await Task.Delay(TimeSpan.FromSeconds(2), token);
             }
             catch (OperationCanceledException)
             {
