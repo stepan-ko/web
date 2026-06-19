@@ -131,7 +131,7 @@ public class CameraController : Controller
         camera.Option.AreaY = model.Option.AreaY;
         camera.Option.AreaWidth = model.Option.AreaWidth;
         camera.Option.AreaHeight = model.Option.AreaHeight;
-
+    
         await _cameraService.UpdateAsync(camera);
         return RedirectToAction(nameof(Index));
     }

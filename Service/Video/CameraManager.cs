@@ -124,7 +124,7 @@ public class CameraManager
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
            
-           CameraRecognize cameraRecognize = new CameraRecognize(camera, _logger);
+           using var cameraRecognize = new CameraRecognize(camera, _logger);
 
             while (!token.IsCancellationRequested)
             {
@@ -184,7 +184,7 @@ public class CameraManager
 
                 Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
 
-                Cv2.ImEncode(".jpg", frame, out var outBytes, new[] { (int)ImwriteFlags.JpegQuality, 80 });
+                Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
                 _frameBuffer.SetFrame(camera.Id, outBytes);
             }
         }
@@ -206,6 +206,11 @@ public class CameraManager
             process?.Dispose();
         }
     }
+private static readonly int[] JpegParams =
+{
+    (int)ImwriteFlags.JpegQuality,
+    80
+};
 
     public void StartCamera(Camera camera)
     {

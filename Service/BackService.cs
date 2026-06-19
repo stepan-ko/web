@@ -20,13 +20,14 @@ public class BackService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("BackService starting...");
+        _logger.LogDebug("BackService starting...");
 
-        stoppingToken.Register(() =>
-            _logger.LogInformation("BackService stopping..."));
+        stoppingToken.Register(() => _logger.LogDebug("BackService stopping..."));
 
         try
         {        
+            CameraRecognize.Configure(4, _logger); // 4 - потока.
+
             await _cameraManager.StartAsync(stoppingToken);
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
@@ -35,7 +36,7 @@ public class BackService : BackgroundService
             _logger.LogError(ex, "Fatal error in BackService");
         }
 
-        _logger.LogInformation("BackService stopped.");
+        _logger.LogDebug("BackService stopped.");
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

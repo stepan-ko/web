@@ -1,12 +1,12 @@
 using web.av.AngelVisionLpr;
 using web.av.Imaging;
 using OpenCvSharp;
+using Server.Service;
 
-
-public class CameraRecognize
+public class CameraRecognize: IDisposable
 {
     
-    public static bool Configure(int countThreads)
+    public static bool Configure(int countThreads,  ILogger<BackService> logger)
     {
         try
         {
@@ -22,13 +22,13 @@ public class CameraRecognize
         }
         catch (DllNotFoundException exception)
         {
-            Console.Error.WriteLine("Не удалось загрузить native-библиотеку AngelVision LPR.");
-            Console.Error.WriteLine(exception.Message);
+            logger.LogError("Не найдена библиотека. " + exception.Message);
             return false;
         }
         catch (Exception exception)
         {
             Console.Error.WriteLine(exception);
+            logger.LogError(exception.Message);
             return false;
         } 
     }
@@ -36,6 +36,7 @@ public class CameraRecognize
     private ulong FrameId = 1;
     private ulong CountRecognize = 1;
     private readonly ILogger<CameraManager> _logger;
+    private readonly LprRecognizer _recognizer;
 
     public CameraRecognize(Camera camera, ILogger<CameraManager> logger)
     {
@@ -53,21 +54,19 @@ public class CameraRecognize
             new AitRect(camera.Option.AreaX, camera.Option.AreaY, camera.Option.AreaWidth, camera.Option.AreaHeight) : 
             new AitRect(0, 0, camera.Width, camera.Height)
         };
-        recognizer = new LprRecognizer(options);    
+        _recognizer = new LprRecognizer(options);    
        
     }
-    private LprRecognizer recognizer;
-
+    
     public List<Rect> RecognizePlate(Mat frame)
     {
         List<Rect> plateBorder = new List<Rect>();
         try
         {           
            
-
             using var bmpFrame = BmpFrameConverter.FromMat(frame);
             using var pinnedFrame = PinnedFrame.Pin(bmpFrame);
-            using var plateBuffer = recognizer.Recognize(pinnedFrame.Image, FrameId++, "");   
+            using var plateBuffer = _recognizer.Recognize(pinnedFrame.Image, FrameId++, "");   
                 
             foreach (var plate in plateBuffer.PopAll())
             {                
@@ -84,7 +83,7 @@ public class CameraRecognize
                                         $"Frame id: {plate.FrameId}"+ Environment.NewLine +
                                         $"Rect: x={plate.Data.Position.X}, y={plate.Data.Position.Y}, w={plate.Data.Position.Width}, h={plate.Data.Position.Height}" + Environment.NewLine;
                 
-                _logger.LogInformation(msg);
+                _logger.LogDebug(msg);
                 
 
                 PlateNativeMemory.ReleaseOwnedBuffers(plate);
@@ -93,12 +92,17 @@ public class CameraRecognize
         }       
         catch (Exception exception)
         {
-            Console.Error.WriteLine(exception); 
-
+            _logger.LogError(exception.ToString()); 
             return plateBorder;           
         }   
 
     }
 
+
+
+public void Dispose()
+    {
+        _recognizer?.Dispose();
+    }
 
 }
