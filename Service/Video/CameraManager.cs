@@ -8,7 +8,7 @@ public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly FrameBuffer _frameBuffer;
-    private readonly Dictionary<int, Task> _cameraTasks = new();
+    // private readonly Dictionary<int, Task> _cameraTasks = new();
     private readonly ConcurrentDictionary<int, CameraWorker> _workers = new();
     private CancellationTokenSource? _cts;
     private readonly ILogger<CameraManager> _logger;
@@ -19,58 +19,12 @@ public class CameraManager
         _logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken token)
-    {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-
-        var cameras = await LoadCameras();
-
-        foreach (var camera in cameras)
-        {
-            StartCamera(camera, _cts.Token);
-        }
-    }
-
-    public void StartCamera(Camera camera, CancellationToken token)
-    {
-        if (_cameraTasks.ContainsKey(camera.Id))
-            return;
-
-        if (!camera.Enable)
-            return;
-
-        var task = Task.Run(() => ProcessCamera(camera, token), token);
-
-        _cameraTasks[camera.Id] = task;
-    }
-
-    public async Task StopAsync()
-    {
-        if (_cts != null)
-            _cts.Cancel();
-
-        await Task.WhenAll(_cameraTasks.Values);
-
-        _cameraTasks.Clear();
-    }
-
-    private async Task<List<Camera>> LoadCameras()
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        return await db.Cameras
-            .Include(c => c.Option)
-            .Where(c => c.Enable)
-            .ToListAsync();
-    }
-
-
-
-   private async Task ProcessCamera(Camera camera, CancellationToken token)
-    {
-        _logger.LogDebug($"Запуск обработки видео камеры: {camera.Name}");
-        _logger.LogDebug($"Адрес видеопотока: {camera.StreamUrl}");
+    
+   private async Task ProcessCameraInternal(Camera camera, CancellationToken token)
+    {   
+       
+        _logger.LogDebug("Запуск обработки видео камеры {Name}",camera.Name);
+        _logger.LogDebug("Адрес видеопотока: {camera.StreamUrl}", camera.StreamUrl);
 
         var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase)
             ? "-rtsp_transport tcp "
@@ -206,23 +160,117 @@ public class CameraManager
             process?.Dispose();
         }
     }
-private static readonly int[] JpegParams =
-{
-    (int)ImwriteFlags.JpegQuality,
-    80
-};
+
+    private async Task ProcessCamera(Camera camera, CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            try
+            {
+                await ProcessCameraInternal(camera, token);
+                _logger.LogWarning("Камера {Name} остановилась, повторное подключение через 5 секунд", camera.Name);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,"Ошибка камеры {Name}, повторное подключение через 5 секунд",camera.Name);
+            }
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+
+    public async Task StartAsync(CancellationToken token)
+    {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+
+        var cameras = await LoadCameras();
+
+        foreach (var camera in cameras)
+        {
+            StartCamera(camera);
+        }
+
+        _logger.LogInformation(
+            "Запущено камер: {Count}",
+            cameras.Count);
+    }
+
+   public async Task StopAsync()
+    {
+        if (_workers.IsEmpty)
+            return;
+
+        _logger.LogInformation("Остановка всех камер...");
+
+        foreach (var worker in _workers.Values)
+        {
+            worker.Cts?.Cancel();
+        }
+
+        var tasks = _workers.Values
+            .Where(x => x.Task != null)
+            .Select(x => x.Task!);
+
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch (OperationCanceledException)
+        {
+            // Нормальная ситуация при остановке
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при остановке камер");
+        }
+
+        _workers.Clear();
+
+        _cts?.Dispose();
+        _cts = null;
+
+        _logger.LogInformation("Все камеры остановлены");
+    }
+
+    private async Task<List<Camera>> LoadCameras()
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return await db.Cameras
+            .Include(c => c.Option)
+            .Where(c => c.Enable)
+            .ToListAsync();
+    }
+
+    private static readonly int[] JpegParams = {
+        (int)ImwriteFlags.JpegQuality,
+        80
+    };
 
     public void StartCamera(Camera camera)
     {
-        if (_workers.TryGetValue(camera.Id, out var worker))
-        {
-            if (worker.IsRunning)
-                return;
-        }
+        if (!camera.Enable)
+            return;
+
+        if (_workers.ContainsKey(camera.Id))
+            return;
 
         var cts = new CancellationTokenSource();
 
-        worker = new CameraWorker
+        var worker = new CameraWorker
         {
             Camera = camera,
             Cts = cts
@@ -234,14 +282,36 @@ private static readonly int[] JpegParams =
             {
                 await ProcessCamera(camera, cts.Token);
             }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation(
+                    "Камера {Name} остановлена",
+                    camera.Name);
+            }
             catch (Exception ex)
             {
                 worker.LastError = ex.Message;
-                _logger.LogError(ex, "Camera error");
+
+                _logger.LogError(
+                    ex,
+                    "Ошибка камеры {Name}",
+                    camera.Name);
+            } 
+            finally
+            {
+                _workers.TryRemove(camera.Id, out _);
             }
         });
 
-        _workers[camera.Id] = worker;
+        if (!_workers.TryAdd(camera.Id, worker))
+        {
+            cts.Cancel();
+            return;
+        }
+
+        _logger.LogInformation(
+            "Камера {Name} запущена",
+            camera.Name);
     }
 
     public async Task StopCamera(int cameraId)
@@ -261,7 +331,6 @@ private static readonly int[] JpegParams =
         }
         _workers.TryRemove(cameraId, out _);
     }
-
 
     public async Task RestartCamera(Camera camera)
     {
