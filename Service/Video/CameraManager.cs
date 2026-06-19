@@ -84,11 +84,9 @@ public class CameraManager
             {
                 int read = 0;
                 while (read < frameSize)
-                {
-                    _logger.LogTrace("Start ReadAsync " + DateTime.Now );
+                {                   
                     int r = await stream.ReadAsync(buffer, read, frameSize - read, token);
-                    _logger.LogTrace("End ReadAsync: {Bytes} {DateTime.Now}", r, DateTime.Now);
-                    
+                                        
                     if (r == 0) break;
                     read += r;
                 }
@@ -111,17 +109,12 @@ public class CameraManager
                
                 if (!camera.Simulate)
                 {  
-                   
-                  _logger.LogTrace("Before Recognize " + DateTime.Now);
-
                    List<Rect> plates = cameraRecognize.RecognizePlate(frame);
 
-                    _logger.LogTrace("After Recognize" + DateTime.Now);
                    foreach (var plate in plates)
                     {                        
                         Cv2.Rectangle(frame, plate, Scalar.Yellow, 2);
-                    }   
-                            
+                    }    
                 }
 
 
@@ -145,11 +138,8 @@ public class CameraManager
                 int y = margin + textSize.Height;
 
                 Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
-
-                _logger.LogTrace("Before Cv2.ImEncode " + DateTime.Now);
+                
                 Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
-                _logger.LogTrace("After Cv2.ImEncode " + DateTime.Now);
-
                 _frameBuffer.SetFrame(camera.Id, outBytes);
             }
         }
