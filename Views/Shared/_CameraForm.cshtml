@@ -1,39 +1,43 @@
 @model CameraViewModel
 
+<div class="row">
 
-<div class="mb-3">
-    <label class="form-label">Название</label>
-    <input asp-for="Name" class="form-control" />
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Название</label>
+        <input asp-for="Name" class="form-control" />
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Поток URL</label>
+        <input asp-for="StreamUrl" class="form-control" />
+    </div>
 </div>
+<div class="row">
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Ширина кадра</label>
+        <input asp-for="Width" class="form-control" />
+    </div>
 
-<div class="mb-3">
-    <label class="form-label">Поток URL</label>
-    <input asp-for="StreamUrl" class="form-control" />
+    <div class="col-md-3 mb-3">
+        <label class="form-label">Высота кадра</label>
+        <input asp-for="Height" class="form-control" />
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <label class="form-label">FPS для распознавания</label>
+        <input asp-for="Fps" class="form-control" />
+    </div>
 </div>
+<div class="row">
+    <div class="col-md-3 form-check mb-2">
+        <input asp-for="Simulate" class="form-check-input" />
+        <label class="form-check-label">Симуляция</label>
+    </div>
 
-<div class="mb-3">
-    <label class="form-label">Ширина кадра</label>
-    <input asp-for="Width" class="form-control" />
-</div>
-
-<div class="mb-3">
-    <label class="form-label">Высота кадра</label>
-    <input asp-for="Height" class="form-control" />
-</div>
-
-<div class="mb-3">
-    <label class="form-label">FPS для распознавания</label>
-    <input asp-for="Fps" class="form-control" />
-</div>
-
-<div class="form-check mb-2">
-    <input asp-for="Simulate" class="form-check-input" />
-    <label class="form-check-label">Симуляция</label>
-</div>
-
-<div class="form-check mb-3">
-    <input asp-for="Enable" class="form-check-input" />
-    <label class="form-check-label">Включить</label>
+    <div class="col-md-3 form-check mb-3">
+        <input asp-for="Enable" class="form-check-input" />
+        <label class="form-check-label">Включить</label>
+    </div>
 </div>
 
 <hr />
@@ -42,58 +46,57 @@
 
 <div class="row">
 
-    <div class="col-md-4 mb-2">
-        <label>Min  Width</label>
+    <div class="col-md-2 mb-2">
+        <label>Min ширина номера, px</label>
         <input asp-for="Option.MinPlateWidth" class="form-control" />
     </div>
 
-    <div class="col-md-4 mb-2">
-        <label>Max Width</label>
+    <div class="col-md-2 mb-2">
+        <label>Max ширина номера, px</label>
         <input asp-for="Option.MaxPlateWidth" class="form-control" />
     </div>
 
-    <div class="col-md-4 mb-2">
-        <label>Min Weight</label>
-        <input asp-for="Option.MinProbability" class="form-control" />
-    </div>
-
-    <div class="col-md-4 form-check mt-2">
-        <input asp-for="Option.Tracking" class="form-check-input" />
-        <label class="form-check-label">Tracking</label>
-    </div>
-
-    <div class="col-md-4 mb-2">
-        <label>Frames to lose</label>
-        <input asp-for="Option.NumberFrameForLose" class="form-control" />
-    </div>
-
-    <div class="col-md-4 mb-2">
+    <div class="col-md-3 mb-2">
         <label>Минимальная вероятность, %</label>
         <input asp-for="Option.MinProbability" class="form-control" />
     </div>
+</div>
 
-    <div class="col-md-4 form-check mt-2">
-        <input asp-for="Option.UseArea" class="form-check-input" />
-        <label class="form-check-label">Use Area</label>
+<div class="row">
+    <div class="col-md-2 form-check mt-2">        
+        <label class="form-check-label">Отслеживание</label>
+        <input asp-for="Option.Tracking" class="form-check-input" />
     </div>
 
-    <div class="col-md-3 mb-2">
-        <label>X</label>
+    <div class="col-md-2 mb-2">
+        <label>Количество кадров потери отслеживания</label>
+        <input asp-for="Option.NumberFrameForLose" class="form-control" />
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12 form-check mb-2">
+        <label class="form-check-label">Использовать область</label>
+        <input asp-for="Option.UseArea" class="form-check-input" />        
+    </div>
+
+    <div class="col-md-2 mb-2">
+        <label>Координа X, px</label>
         <input asp-for="Option.AreaX" class="form-control" />
     </div>
 
-    <div class="col-md-3 mb-2">
-        <label>Y</label>
+    <div class="col-md-2 mb-2">
+        <label>Координа X, px</label>
         <input asp-for="Option.AreaY" class="form-control" />
     </div>
-
-    <div class="col-md-3 mb-2">
-        <label>Width</label>
+</div>
+<div class="row">
+    <div class="col-md-2 mb-2">
+        <label>Ширина области, px</label>
         <input asp-for="Option.AreaWidth" class="form-control" />
     </div>
 
-    <div class="col-md-3 mb-2">
-        <label>Height</label>
+    <div class="col-md-2 mb-2">
+        <label>Высота области, px</label>
         <input asp-for="Option.AreaHeight" class="form-control" />
     </div>
 
