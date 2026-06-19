@@ -9,7 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Camera> Cameras => Set<Camera>();
     public DbSet<CameraOption> CameraOptions => Set<CameraOption>();
-
+    public DbSet<RecognizeTrack> RecognizeTracks => Set<RecognizeTrack>();
    
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -23,5 +23,29 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);;
 
         modelBuilder.Entity<CameraOption>().ToTable("CameraOptions");
+
+        modelBuilder.Entity<RecognizeTrack>(entity =>
+        {
+            entity.ToTable("RecognizeTracks");
+
+            // связь с камерой
+            entity.HasOne(rt => rt.Camera)
+                  .WithMany()
+                  .HasForeignKey(rt => rt.CameraId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            // индексы (ОЧЕНЬ важно для LPR)
+            entity.HasIndex(rt => rt.PlateNumber);
+            entity.HasIndex(rt => rt.CameraId);
+            entity.HasIndex(rt => rt.FirstSeen);
+            entity.HasIndex(rt => rt.LeftAt);
+
+            // ограничения (по желанию)
+            entity.Property(rt => rt.PlateNumber)
+                  .HasMaxLength(15);
+        });
+
+
+
     }
 }
