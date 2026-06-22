@@ -8,9 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddScoped<ICameraService, CameraService>();
+builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddSingleton<CameraManager>();
 builder.Services.AddSingleton<FrameBuffer>();
-builder.Services.AddSingleton<CameraManager>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {

@@ -1,6 +1,7 @@
 public class TrackRecognize
 {
     public long Id { get; set; }
+    public Guid TrackId { get; set; }
 
     public int CameraId { get; set; }
     public Camera Camera { get; set; } = null!;
