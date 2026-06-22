@@ -6,28 +6,38 @@ using System.Diagnostics;
 public class PlateAnalyse
 {
     
-    private ConcurrentDictionary<string, TrackActive> _activeTracks;
+    private ConcurrentDictionary<string, TrackActive> _activeTracks = new ConcurrentDictionary<string, TrackActive>();
 
-
-    public void CheckTrack(TrackActive track)
+    private int countTracks;
+    private readonly ILogger<CameraManager> logger;
+    public PlateAnalyse(ILogger<CameraManager> _logger)
     {
-        string key = track.PlateNumber;
-        
-        if (!_activeTracks.ContainsKey(key))
-        {            
-            //Не было в камере, нужно добавить
-            _activeTracks.TryAdd(key, track);
-            Debug.WriteLine($"TryAdd({key}, {track})");
-        }
-        else
+        logger = _logger;
+    }
+     public void CheckTrack(TrackActive track)
+    {
+         _activeTracks.AddOrUpdate(
+        track.PlateNumber,
+        _ => track,
+        (_, existing) =>
         {
-            //Уже был, необходимо обновить 
-            _activeTracks[key].LastSeen = DateTime.Now;
-            _activeTracks[key].BestProbability = track.BestProbability;       
-             Debug.WriteLine($"Update LastSeen = {_activeTracks[key].LastSeen}, BestProbability = {_activeTracks[key].BestProbability})");     
+            existing.LastSeen = DateTime.Now;
+            existing.BestProbability = track.BestProbability;
+            return existing;
+        });
+       
+       if (_activeTracks.Count > countTracks)
+        {
+            countTracks = _activeTracks.Count;
+            logger.LogTrace($"Количество _activeTracks = {countTracks}");
+            foreach (var t in _activeTracks)
+            {
+                logger.LogTrace(t.Value.PlateNumber);
+            }
+            
+            
         }
-        
-        
+      
     } 
 
 }

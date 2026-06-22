@@ -44,11 +44,14 @@ public class CameraManager
             FileName = "ffmpeg",
             Arguments =
                 rtspOpt +
-                $"-re -i \"{camera.StreamUrl}\" " +
+                "-fflags +nobuffer+discardcorrupt " +
+                "-flags low_delay " +
+                "-analyzeduration 1000000 " +
+                "-probesize 1000000 " +
+                $"-i \"{camera.StreamUrl}\" " +
                 "-an -sn -dn " +
-                "-f rawvideo -pix_fmt bgr24 " +
-                $"-vf fps={fps},scale={width}:{height} " +
-                "-",
+                "-pix_fmt bgr24 " +
+                "-f rawvideo -",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -71,9 +74,9 @@ public class CameraManager
             {
                 try
                 {
-                    string? line;
-                    while ((line = await process.StandardError.ReadLineAsync()) != null)
-                        _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
+                    // string? line;
+                    // while ((line = await process.StandardError.ReadLineAsync()) != null)
+                    //     _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
                 }
                 catch { /* процесс завершился — это нормально */ }
             });
@@ -83,7 +86,7 @@ public class CameraManager
            
            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
-            PlateAnalyse plateAnalyse = new PlateAnalyse();
+            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger);
 
             while (!token.IsCancellationRequested)
             {
@@ -109,12 +112,13 @@ public class CameraManager
                 }
 
                 using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
-
+           
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
                
                 if (!camera.Simulate)
                 {  
-                   List<PlateResult> platesResult = cameraRecognize.RecognizePlate(frame);
+                   List<PlateResult> platesResult = new List<PlateResult>();
+                   platesResult = cameraRecognize.RecognizePlate(frame);
 
                    foreach (var plate in platesResult)
                     {     
@@ -122,13 +126,15 @@ public class CameraManager
                         Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
 
                         // Обновляем активные номера в памяти                       
-                       plateAnalyse.CheckTrack(new TrackActive
+                       var rawTrack = new TrackActive
                        {
                            CameraId = camera.Id,
                            PlateNumber = plate.PlateNumber,
                            BestProbability = plate.Probability,
                            BestImageBytes = plate.BestImageBytes
-                       });
+                       };
+
+                       plateAnalyse.CheckTrack(rawTrack);
 
                     }    
                 }
@@ -362,5 +368,8 @@ public class CameraManager
             && worker.IsRunning;
     }
 
-
+    private ConcurrentDictionary<string, TrackActive> _activeTracks = new ConcurrentDictionary<string, TrackActive>();
+    private int countTracks;
+    
+   
 }

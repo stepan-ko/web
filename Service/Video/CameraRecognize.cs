@@ -92,7 +92,7 @@ public class CameraRecognize: IDisposable
                                         $"Frame id: {plate.FrameId}"+ Environment.NewLine +
                                         $"Rect: x={plate.Data.Position.X}, y={plate.Data.Position.Y}, w={plate.Data.Position.Width}, h={plate.Data.Position.Height}" + Environment.NewLine;
                 
-                _logger.LogDebug(msg);
+                // _logger.LogDebug(msg);
                 
                 PlateNativeMemory.ReleaseOwnedBuffers(plate);
             }
