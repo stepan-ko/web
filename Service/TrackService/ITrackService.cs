@@ -1,6 +1,6 @@
 public interface ITrackService
 {
-    Task<TrackRecognize> StartOrGetAsync(int cameraId, string plate, double probability);
+    Task<TrackRecognize> StartAsync(int cameraId, string plate, double probability);
     
     Task UpdateAsync(long trackId, double probability);
 

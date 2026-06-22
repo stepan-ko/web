@@ -1,7 +1,7 @@
 
 public class TrackActive
 {    
-    public Guid TrackId { get; set; }
+    public long Id { get; set; }
     public int CameraId { get; set; }
     
     public string PlateNumber { get; set; } = "";
