@@ -17,13 +17,14 @@ public class PlateAnalyse
         {            
             //Не было в камере, нужно добавить
             _activeTracks.TryAdd(key, track);
-
+            Debug.WriteLine($"TryAdd({key}, {track})");
         }
         else
         {
-            //Уже был, необходимо обновить время 
+            //Уже был, необходимо обновить 
             _activeTracks[key].LastSeen = DateTime.Now;
-            _activeTracks[key].BestProbability = track.BestProbability;            
+            _activeTracks[key].BestProbability = track.BestProbability;       
+             Debug.WriteLine($"Update LastSeen = {_activeTracks[key].LastSeen}, BestProbability = {_activeTracks[key].BestProbability})");     
         }
         
         
