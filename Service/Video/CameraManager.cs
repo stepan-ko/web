@@ -8,6 +8,8 @@ public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly FrameBuffer _frameBuffer;
+   
+
     // private readonly Dictionary<int, Task> _cameraTasks = new();
     private readonly ConcurrentDictionary<int, CameraWorker> _workers = new();
     private CancellationTokenSource? _cts;
@@ -17,6 +19,7 @@ public class CameraManager
         _scopeFactory = scopeFactory;
         _frameBuffer = buffer;
         _logger = logger;
+       
     }
 
     
@@ -80,6 +83,8 @@ public class CameraManager
            
            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
+            PlateAnalyse plateAnalyse = new PlateAnalyse();
+
             while (!token.IsCancellationRequested)
             {
                 int read = 0;
@@ -109,11 +114,22 @@ public class CameraManager
                
                 if (!camera.Simulate)
                 {  
-                   List<Rect> plates = cameraRecognize.RecognizePlate(frame);
+                   List<PlateResult> platesResult = cameraRecognize.RecognizePlate(frame);
 
-                   foreach (var plate in plates)
-                    {                        
-                        Cv2.Rectangle(frame, plate, Scalar.Yellow, 2);
+                   foreach (var plate in platesResult)
+                    {     
+                        // рисуем прямоугольник вокруг номера
+                        Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
+
+                        // Обновляем активные номера в памяти                       
+                       plateAnalyse.CheckTrack(new TrackActive
+                       {
+                           CameraId = camera.Id,
+                           PlateNumber = plate.PlateNumber,
+                           BestProbability = plate.Probability,
+                           BestImageBytes = plate.BestImageBytes
+                       });
+
                     }    
                 }
 

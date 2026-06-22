@@ -58,9 +58,9 @@ public class CameraRecognize: IDisposable
        
     }
     
-    public List<Rect> RecognizePlate(Mat frame)
+    public List<PlateResult> RecognizePlate(Mat frame)
     {
-        List<Rect> plateBorder = new List<Rect>();
+        List<PlateResult> plateResults = new List<PlateResult>();
         try
         {           
            
@@ -71,7 +71,16 @@ public class CameraRecognize: IDisposable
             foreach (var plate in plateBuffer.PopAll())
             {                
 
-                plateBorder.Add(new Rect(plate.Data.Position.X,plate.Data.Position.Y, plate.Data.Position.Width, plate.Data.Position.Height));
+                var plateResult = new PlateResult
+                {
+                    RectPlate = new Rect(plate.Data.Position.X,plate.Data.Position.Y, plate.Data.Position.Width, plate.Data.Position.Height),
+                    TrackerId = plate.Data.Identifier,
+                    PlateNumber = plate.Data.PlateText,
+                    Probability = plate.Data.Probability,
+                    BestImageBytes = AitImageConverter.ToJpeg(plate.BestImage)
+                };
+                
+                plateResults.Add(plateResult);              
                 
                 string msg = $"Кадр: {FrameId}" + Environment.NewLine +
                                         $"Всего Кадров распознано: {CountRecognize++}" + Environment.NewLine +                
@@ -85,15 +94,14 @@ public class CameraRecognize: IDisposable
                 
                 _logger.LogDebug(msg);
                 
-
                 PlateNativeMemory.ReleaseOwnedBuffers(plate);
             }
-            return plateBorder;
+            return plateResults;
         }       
         catch (Exception exception)
         {
             _logger.LogError(exception.ToString()); 
-            return plateBorder;           
+            return plateResults;           
         }   
 
     }
