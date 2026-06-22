@@ -1,3 +1,4 @@
+using OpenCvSharp;
 
 public class TrackActive
 {    
@@ -17,6 +18,10 @@ public class TrackActive
 
     // лучший кадр
     public byte[]? BestImageBytes { get; set; }
+
+    public Rect RectPlate { get; set; }
+
+    public int CountFrame  { get; set; }
 
     // внутренний id трекера SDK
     public uint TrackerId { get; set; }

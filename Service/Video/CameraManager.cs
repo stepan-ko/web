@@ -50,6 +50,7 @@ public class CameraManager
                 "-probesize 1000000 " +
                 $"-i \"{camera.StreamUrl}\" " +
                 "-an -sn -dn " +
+                $"-vf fps={camera.Fps} " +
                 "-pix_fmt bgr24 " +
                 "-f rawvideo -",
             RedirectStandardOutput = true,
@@ -112,8 +113,10 @@ public class CameraManager
                 }
 
                 using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
-           
+                
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
+                
+                //  _logger.LogTrace($"количество кадров: {cnt++}");
                
                 if (!camera.Simulate)
                 {  
@@ -131,7 +134,8 @@ public class CameraManager
                            CameraId = camera.Id,
                            PlateNumber = plate.PlateNumber,
                            BestProbability = plate.Probability,
-                           BestImageBytes = plate.BestImageBytes
+                           BestImageBytes = plate.BestImageBytes,
+                           RectPlate = plate.RectPlate
                        };
 
                        plateAnalyse.CheckTrack(rawTrack);
@@ -369,7 +373,7 @@ public class CameraManager
     }
 
     private ConcurrentDictionary<string, TrackActive> _activeTracks = new ConcurrentDictionary<string, TrackActive>();
-    private int countTracks;
+    private int cnt;
     
    
 }
