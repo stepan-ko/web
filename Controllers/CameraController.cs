@@ -44,6 +44,8 @@ public class CameraController : Controller
             Width = model.Width,
             Height = model.Height,
             Fps = model.Fps,
+            TimeDetect = model.TimeDetect,
+            TimeLost = model.TimeLost,
             Option = new CameraOption
             {
                 MinPlateWidth = model.Option.MinPlateWidth,
@@ -82,7 +84,9 @@ public class CameraController : Controller
             Enable = camera.Enable,
             Width = camera.Width,
             Height = camera.Height,
-            Fps = camera.Fps,
+            Fps = camera.Fps,            
+            TimeDetect = camera.TimeDetect,
+            TimeLost = camera.TimeLost,
             Option = new CameraOptionViewModel
             {
                 MinPlateWidth = camera.Option.MinPlateWidth,
@@ -121,6 +125,8 @@ public class CameraController : Controller
         camera.Width = model.Width;
         camera.Height = model.Height;
         camera.Fps = model.Fps;
+        camera.TimeDetect = model.TimeDetect;
+        camera.TimeLost = model.TimeLost;
         camera.Option.MinPlateWidth = model.Option.MinPlateWidth;
         camera.Option.MaxPlateWidth = model.Option.MaxPlateWidth;
         camera.Option.MinProbability = model.Option.MinProbability;

@@ -8,5 +8,7 @@ public class CameraViewModel
     public int Width { get; set; }
     public int Height { get; set; }
     public int Fps { get; set; }
+    public int TimeDetect { get; set; }        
+    public int TimeLost { get; set; }
     public CameraOptionViewModel Option { get; set; } = new();
 }
