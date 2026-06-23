@@ -1,7 +1,8 @@
 public class PlateDetect
 {
-    public int countFrame { get; set; }
-    public DateTime firstDetect { get; set; } 
-    public bool isActive { get; set; } 
+    public int CountFrame { get; set; }
+    public DateTime FirstDetect { get; set; } 
+    public DateTime? LastDetect { get; set; } 
+    public bool IsActive { get; set; } 
 }
    

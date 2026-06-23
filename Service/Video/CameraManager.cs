@@ -138,11 +138,11 @@ public class CameraManager
                            RectPlate = plate.RectPlate
                        };
 
-                       plateAnalyse.Analize(rawTrack);
+                       plateAnalyse.Detect(rawTrack);
 
                     }    
                 }
-
+                plateAnalyse.Lost(); // Проверка что номер покинул кадр
 
                 if (camera.Option.UseArea)
                 {

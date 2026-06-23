@@ -15,24 +15,27 @@ public class PlateAnalyse
         logger = _logger;
     }
 
-private int countFrameDetect = 10;
+private int countFrameDetect = 40;
+private int timeLost = 10;
 
-public void Analize(TrackActive track)
+public void Detect(TrackActive track)
     {
         if (!ValidNumber(track.PlateNumber))
         return;
         
         string key = track.PlateNumber;        
-        if (_activeTracks.ContainsKey(key) && !_activeTracks[key].isActive)        
+        if (_activeTracks.ContainsKey(key) && !_activeTracks[key].IsActive)        
         {
             // Номер уже был, обновляем данные 
-            if (++_activeTracks[key].countFrame > countFrameDetect)
+            _activeTracks[key].LastDetect = DateTime.Now;
+
+            if (++_activeTracks[key].CountFrame > countFrameDetect)
             {
                 // Значит Определаем что он АКТИВНЫЙЙ и удаляем со словаря
-                logger.LogDebug(key + ", ОБНАРУЖЕН = " + DateTime.Now);
-                _activeTracks.Remove(key);
-                _activeTracks[key].isActive = true;
+                logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);                
+                _activeTracks[key].IsActive = true;
             }
+
         }
          
         if (!_activeTracks.ContainsKey(key))
@@ -40,19 +43,31 @@ public void Analize(TrackActive track)
             //  номера нет, добавляем
             var plateDetect = new PlateDetect
             {
-                countFrame = 1,
-                firstDetect = DateTime.Now,
-                isActive = false
+                CountFrame = 1,
+                FirstDetect = DateTime.Now,
+                LastDetect = DateTime.Now,
+                IsActive = false
             };
             _activeTracks.Add(key,plateDetect);
-            logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].firstDetect);
-            // Task.Run(async () =>
-            // {
-            //     await Task.Delay(5000);
-            //     logger.LogDebug(key + ", probability= " + _probability[key]);
-            // });
+            logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
+            
         }
         
+    }
+
+
+    public void Lost()
+    {       
+        var timeNow = DateTime.Now; 
+        //Запуск/Перезапуск таймера для определения что номер покинул кадр
+        foreach (var track in _activeTracks)
+        {
+            if (track.Value.IsActive && timeNow - track.Value.LastDetect > TimeSpan.FromSeconds(timeLost))
+            {                
+                logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow}");
+                _activeTracks.Remove(track.Key, out _);
+            }
+        }
     }
 
     public static bool ValidNumber(string number)
