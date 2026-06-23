@@ -8,15 +8,20 @@ public class PlateAnalyse
     
     private Dictionary<string, PlateDetect> _activeTracks = new Dictionary<string, PlateDetect>();
 
-    private int countTracks;
     private readonly ILogger<CameraManager> logger;
-    public PlateAnalyse(ILogger<CameraManager> _logger)
+    private readonly int CameraId;
+    private readonly int countFrameDetect ;
+    private readonly int timeLost;
+
+    public PlateAnalyse(ILogger<CameraManager> _logger, Camera camera)
     {
         logger = _logger;
+        CameraId = camera.Id;
+        timeLost = camera.TimeLost;
+        countFrameDetect = camera.Fps * camera.TimeDetect;
     }
 
-private int countFrameDetect = 15;
-private int timeLost = 40;
+
 
 public void Detect(TrackActive track)
     {
@@ -24,18 +29,17 @@ public void Detect(TrackActive track)
         return;
         
         string key = track.PlateNumber;        
-        if (_activeTracks.ContainsKey(key) && !_activeTracks[key].IsActive)        
+        if (_activeTracks.ContainsKey(key))        
         {
             // Номер уже был, обновляем данные 
             _activeTracks[key].LastDetect = DateTime.Now;
 
-            if (++_activeTracks[key].CountFrame > countFrameDetect)
+            if (!_activeTracks[key].IsActive && ++_activeTracks[key].CountFrame > countFrameDetect)
             {
-                // Значит Определаем что он АКТИВНЫЙЙ и удаляем со словаря
+                // Значит Определаем что он АКТИВНЫЙЙ
                 logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);                
                 _activeTracks[key].IsActive = true;
             }
-
         }
          
         if (!_activeTracks.ContainsKey(key))
@@ -73,7 +77,7 @@ public void Detect(TrackActive track)
                 }
                 else
                 {
-                   logger.LogDebug($"{track.Key} УДАЛЕН без Активности {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}"); 
+                   logger.LogDebug($"{track.Key} УДАЛЕН без Детекции {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}"); 
                 }
                 _activeTracks.Remove(track.Key, out _);
             }
