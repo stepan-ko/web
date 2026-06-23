@@ -6,7 +6,7 @@ using System.Diagnostics;
 public class PlateAnalyse
 {
     
-    private ConcurrentDictionary<string, TrackActive> _activeTracks = new ConcurrentDictionary<string, TrackActive>();
+    private Dictionary<string, PlateDetect> _activeTracks = new Dictionary<string, PlateDetect>();
 
     private int countTracks;
     private readonly ILogger<CameraManager> logger;
@@ -14,65 +14,46 @@ public class PlateAnalyse
     {
         logger = _logger;
     }
-private Dictionary<string, double> _probability = new ();
+
+private int countFrameDetect = 10;
+
 public void Analize(TrackActive track)
-    {
-        string key = track.PlateNumber;
-        double p = track.BestProbability;
-        if (_probability.ContainsKey(key))
-        {
-            _probability[key] += p;
-        }
-        else
-        {
-            _probability.Add(key,p);
-            Task.Run(async () =>
-            {
-                await Task.Delay(5000);
-                logger.LogDebug(key + ", probability= " + _probability[key]);
-            });
-        }
-        
-    }
-
-
-
-     public void CheckTrack(TrackActive track)
     {
         if (!ValidNumber(track.PlateNumber))
         return;
-
-
-
-        _activeTracks.AddOrUpdate(
-        track.PlateNumber,
-        _ => track,
-        (_, existing) =>
+        
+        string key = track.PlateNumber;        
+        if (_activeTracks.ContainsKey(key) && !_activeTracks[key].isActive)        
         {
-            existing.LastSeen = DateTime.Now;
-            existing.BestProbability = track.BestProbability;
-            ++existing.CountFrame;
-            return existing;
-        });
-       
-    //  logger.LogTrace(track.PlateNumber + " , " + track.BestProbability +" , " + track.CountFrame + " , " + track.RectPlate.X + " , " + track.RectPlate.Y + " , " + track.RectPlate.Width + " , " + track.RectPlate.Height);
-
-       if (_activeTracks.Count > countTracks)
-        {
-            countTracks = _activeTracks.Count;
-            logger.LogTrace($"Количество _activeTracks = {countTracks}");
-            foreach (var t in _activeTracks)
+            // Номер уже был, обновляем данные 
+            if (++_activeTracks[key].countFrame > countFrameDetect)
             {
-                logger.LogTrace(t.Value.PlateNumber + " , " + t.Value.CountFrame + " , " + t.Value.RectPlate.X + " , " + t.Value.RectPlate.Y + " , " + t.Value.RectPlate.Width + " , " + t.Value.RectPlate.Height);
+                // Значит Определаем что он АКТИВНЫЙЙ и удаляем со словаря
+                logger.LogDebug(key + ", ОБНАРУЖЕН = " + DateTime.Now);
+                _activeTracks.Remove(key);
+                _activeTracks[key].isActive = true;
             }
-            
-            
         }
-      
-    } 
-
-
-
+         
+        if (!_activeTracks.ContainsKey(key))
+        {
+            //  номера нет, добавляем
+            var plateDetect = new PlateDetect
+            {
+                countFrame = 1,
+                firstDetect = DateTime.Now,
+                isActive = false
+            };
+            _activeTracks.Add(key,plateDetect);
+            logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].firstDetect);
+            // Task.Run(async () =>
+            // {
+            //     await Task.Delay(5000);
+            //     logger.LogDebug(key + ", probability= " + _probability[key]);
+            // });
+        }
+        
+    }
 
     public static bool ValidNumber(string number)
         {

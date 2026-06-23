@@ -138,7 +138,6 @@ public class CameraManager
                            RectPlate = plate.RectPlate
                        };
 
-                       plateAnalyse.CheckTrack(rawTrack);
                        plateAnalyse.Analize(rawTrack);
 
                     }    
