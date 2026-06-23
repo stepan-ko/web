@@ -15,8 +15,8 @@ public class PlateAnalyse
         logger = _logger;
     }
 
-private int countFrameDetect = 40;
-private int timeLost = 10;
+private int countFrameDetect = 15;
+private int timeLost = 40;
 
 public void Detect(TrackActive track)
     {
@@ -62,9 +62,19 @@ public void Detect(TrackActive track)
         //Запуск/Перезапуск таймера для определения что номер покинул кадр
         foreach (var track in _activeTracks)
         {
-            if (track.Value.IsActive && timeNow - track.Value.LastDetect > TimeSpan.FromSeconds(timeLost))
+            var timeDiff = timeNow - track.Value.LastDetect;
+
+            if (timeDiff > TimeSpan.FromSeconds(timeLost))
             {                
-                logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow}");
+                if (track.Value.IsActive)
+                {
+                    logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}");
+                    
+                }
+                else
+                {
+                   logger.LogDebug($"{track.Key} УДАЛЕН без Активности {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}"); 
+                }
                 _activeTracks.Remove(track.Key, out _);
             }
         }

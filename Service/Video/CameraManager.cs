@@ -75,9 +75,9 @@ public class CameraManager
             {
                 try
                 {
-                    string? line;
-                    while ((line = await process.StandardError.ReadLineAsync()) != null)
-                        _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
+                    // string? line;
+                    // while ((line = await process.StandardError.ReadLineAsync()) != null)
+                    //     _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
                 }
                 catch { /* процесс завершился — это нормально */ }
             });
