@@ -14,6 +14,26 @@ public class PlateAnalyse
     {
         logger = _logger;
     }
+private Dictionary<string, double> _probability = new ();
+public void Analize(TrackActive track)
+    {
+        string key = track.PlateNumber;
+        double p = track.BestProbability;
+        if (_probability.ContainsKey(key))
+        {
+            _probability[key] += p;
+        }
+        else
+        {
+            _probability.Add(key,p);
+            Task.Run(async () =>
+            {
+                await Task.Delay(5000);
+                logger.LogDebug(key + ", probability= " + _probability[key]);
+            });
+        }
+        
+    }
 
 
 
@@ -35,7 +55,7 @@ public class PlateAnalyse
             return existing;
         });
        
-     logger.LogTrace(track.PlateNumber + " , " + track.BestProbability +" , " + track.CountFrame + " , " + track.RectPlate.X + " , " + track.RectPlate.Y + " , " + track.RectPlate.Width + " , " + track.RectPlate.Height);
+    //  logger.LogTrace(track.PlateNumber + " , " + track.BestProbability +" , " + track.CountFrame + " , " + track.RectPlate.X + " , " + track.RectPlate.Y + " , " + track.RectPlate.Width + " , " + track.RectPlate.Height);
 
        if (_activeTracks.Count > countTracks)
         {
