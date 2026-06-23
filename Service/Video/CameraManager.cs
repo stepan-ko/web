@@ -87,7 +87,7 @@ public class CameraManager
            
            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
-            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger);
+            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger, camera);
 
             while (!token.IsCancellationRequested)
             {
@@ -128,18 +128,8 @@ public class CameraManager
                         // рисуем прямоугольник вокруг номера
                         Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
 
-                        // Обновляем активные номера в памяти                       
-                       var rawTrack = new TrackActive
-                       {
-                           CameraId = camera.Id,
-                           PlateNumber = plate.PlateNumber,
-                           BestProbability = plate.Probability,
-                           BestImageBytes = plate.BestImageBytes,
-                           RectPlate = plate.RectPlate
-                       };
-
-                       plateAnalyse.Detect(rawTrack);
-
+                        // Обновляем активные номера в памяти  
+                       plateAnalyse.Detect(plate.PlateNumber);
                     }    
                 }
                 plateAnalyse.Lost(); // Проверка что номер покинул кадр

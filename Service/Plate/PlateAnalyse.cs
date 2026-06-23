@@ -23,12 +23,14 @@ public class PlateAnalyse
 
 
 
-public void Detect(TrackActive track)
+public void Detect(string plateNumber)
     {
-        if (!ValidNumber(track.PlateNumber))
+        string key = plateNumber;
+        
+        if (!ValidNumber(key))
         return;
         
-        string key = track.PlateNumber;        
+                
         if (_activeTracks.ContainsKey(key))        
         {
             // Номер уже был, обновляем данные 
