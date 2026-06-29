@@ -87,7 +87,8 @@ public class CameraManager
            
            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
-            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger, camera);
+            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger);
+            plateAnalyse.Init(camera);
 
             while (!token.IsCancellationRequested)
             {

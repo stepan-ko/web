@@ -7,21 +7,25 @@ public class PlateAnalyse
 {
     
     private Dictionary<string, PlateDetect> _activeTracks = new Dictionary<string, PlateDetect>();
-
+    public IPlateEventService _events;
     private readonly ILogger<CameraManager> logger;
-    private readonly int CameraId;
-    private readonly int countFrameDetect ;
-    private readonly int timeLost;
+    private int CameraId;
+    private int countFrameDetect ;
+    private int timeLost;
 
-    public PlateAnalyse(ILogger<CameraManager> _logger, Camera camera)
+    public PlateAnalyse(ILogger<CameraManager> _logger)
     {
         logger = _logger;
+    }
+
+
+public void Init(Camera camera)
+    {
+        
         CameraId = camera.Id;
         timeLost = camera.TimeLost;
         countFrameDetect = camera.Fps * camera.TimeDetect;
     }
-
-
 
 public void Detect(string plateNumber)
     {
@@ -34,31 +38,44 @@ public void Detect(string plateNumber)
         if (_activeTracks.ContainsKey(key))        
         {
             // Номер уже был, обновляем данные 
-            _activeTracks[key].LastDetect = DateTime.Now;
+            _activeTracks[key].LastDetect = DateTime.Now;           
 
             if (!_activeTracks[key].IsActive && ++_activeTracks[key].CountFrame > countFrameDetect)
             {
                 // Значит Определаем что он АКТИВНЫЙЙ
-                logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);                
-                _activeTracks[key].IsActive = true;
+               _activeTracks[key].IsActive = true;
+               logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);    
+
+                // _events.Raise(new PlateEvent
+                // {
+                //     CameraId = CameraId,
+                //     PlateNumber = key,
+                //     Type = PlateEventType.Active,
+                //     Timestamp = DateTime.Now
+                // });  
             }
-        }
-         
-        if (!_activeTracks.ContainsKey(key))
-        {
-            //  номера нет, добавляем
-            var plateDetect = new PlateDetect
-            {
-                CountFrame = 1,
-                FirstDetect = DateTime.Now,
-                LastDetect = DateTime.Now,
-                IsActive = false
-            };
-            _activeTracks.Add(key,plateDetect);
-            logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
-            
+            return;
         }
         
+        //  номера нет, добавляем
+        var plateDetect = new PlateDetect
+        {
+            CountFrame = 1,
+            FirstDetect = DateTime.Now,
+            LastDetect = DateTime.Now,
+            IsActive = false
+        };
+        _activeTracks.Add(key,plateDetect);
+        logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
+        
+        // _events.Raise(new PlateEvent
+        // {
+        //     CameraId = CameraId,
+        //     PlateNumber = key,
+        //     Type = PlateEventType.Detect,
+        //     Timestamp = DateTime.Now
+        // });
+
     }
 
 
@@ -72,16 +89,17 @@ public void Detect(string plateNumber)
 
             if (timeDiff > TimeSpan.FromSeconds(timeLost))
             {                
-                if (track.Value.IsActive)
-                {
-                    logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}");
-                    
-                }
-                else
-                {
-                   logger.LogDebug($"{track.Key} УДАЛЕН без Детекции {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}"); 
-                }
-                _activeTracks.Remove(track.Key, out _);
+                logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}");
+
+                // _events.Raise(new PlateEvent
+                // {
+                //     CameraId = CameraId,
+                //     PlateNumber = track.Key,
+                //     Type = PlateEventType.Lost,
+                //     Timestamp = timeNow
+                // });
+
+                _activeTracks.Remove(track.Key);
             }
         }
     }

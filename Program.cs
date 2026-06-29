@@ -11,6 +11,8 @@ builder.Services.AddScoped<ICameraService, CameraService>();
 builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddSingleton<CameraManager>();
 builder.Services.AddSingleton<FrameBuffer>();
+builder.Services.AddSingleton<IPlateEventService, PlateEventService>();
+builder.Services.AddSingleton<PlateAnalyse>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -24,6 +26,7 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // Регистрация фоновой службы
 builder.Services.AddHostedService<BackService>();
+builder.Services.AddHostedService<PlateEventWorker>();
 
 Debug.WriteLine("// Регистрация фоновой службы");
 
