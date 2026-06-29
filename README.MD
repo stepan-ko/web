@@ -58,6 +58,8 @@ dotnet ef database update
 dotnet clean
 dotnet build
 
+# добавить пути к библиотекам
+export LD_LIBRARY_PATH=/home/step/PROJECT/web/av/lib/:$LD_LIBRARY_PATH
 
 # перед стартом
 export LD_LIBRARY_PATH=$PWD/bin/Debug/net10.0/runtimes/linux-x64/native:$LD_LIBRARY_PATH
