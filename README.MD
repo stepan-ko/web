@@ -1,7 +1,5 @@
-Для  новой системы:
-
+# Для  новой системы:
 sudo apt update
-
 sudo apt install dotnet-sdk-10.0
 
 # Установка основного пакета EF Core
@@ -18,7 +16,7 @@ dotnet tool update --global dotnet-ef
 # Если пути нет, добавьте его в файл конфигурации оболочки:
 export PATH="$PATH:$HOME/.dotnet/tools"
 
-
+# Обновить пакеты
 sudo apt update
 
 # Установка OpenCv
@@ -30,9 +28,7 @@ sudo apt install libopencv-dev libopencv-videoio-dev
 
 # Дополнительно установите системные зависимости, которые могут отсутствовать
 sudo apt install libatomic1 libgtk-3-0 libgl1 libglib2.0-0
-
 sudo apt install ffmpeg
-
 
 # Установите PostgreSQL и пакет расширений postgresql-contrib
 sudo apt install postgresql postgresql-contrib -y
@@ -42,10 +38,6 @@ sudo systemctl start postgresql
 
 # Сделать автозапуск сервиса
 sudo systemctl enable postgresql
-
-
-dotnet restore
-
 
 # Подключиться к PostgreSQL
 sudo -u postgres psql
@@ -59,42 +51,21 @@ exit
 # Создать миграцию (если менялась модель данных для БД)
 dotnet ef migrations add NewMigration
 
-
 # Создать базу данных (сначала задать пароль для postgres)
 dotnet ef database update
 
-
-
+# Пересобьрать проект
 dotnet clean
 dotnet build
+
+
+# перед стартом
+export LD_LIBRARY_PATH=$PWD/bin/Debug/net10.0/runtimes/linux-x64/native:$LD_LIBRARY_PATH
 
 # Запустить проект
 dotnet run
 
-
 _________________________
 
-Трансляция потока RTSP
+Трансляция потока RTSP описана в папке rtsp
 ________________________
-
-# Запуск сервера:
-/web/Tests/test2$ pkill mediamtx
-/web/Tests/test2$ ./mediamtx
-
-# в другом терминале запуск из папки /web/Tests/test2$
-# Запуск трансляции:
-ffmpeg -re -stream_loop -1 -i cam.mp4 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam1
-
-
-
-_____________________________
-# перед стартом
-export LD_LIBRARY_PATH=$PWD/bin/Debug/net10.0/runtimes/linux-x64/native:$LD_LIBRARY_PATH
-
-
-или поставить фикс patchelf:
-sudo apt install patchelf
-
-и потом
-patchelf --set-rpath '$ORIGIN' bin/Debug/net10.0/runtimes/linux-x64/native/libav_lpr_c.so
-patchelf --set-rpath '$ORIGIN' bin/Debug/net10.0/runtimes/linux-x64/native/libav_lpr_core_3_2_1.so
