@@ -13,6 +13,7 @@ builder.Services.AddSingleton<CameraManager>();
 builder.Services.AddSingleton<FrameBuffer>();
 builder.Services.AddSingleton<IPlateEventService, PlateEventService>();
 builder.Services.AddSingleton<PlateAnalyse>();
+builder.Services.AddSingleton<IImageStorage, FileImageStorage>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {

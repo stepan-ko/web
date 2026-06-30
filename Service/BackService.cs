@@ -14,8 +14,7 @@ public class BackService : BackgroundService
         _logger = logger;
         _cameraManager = cameraManager;
 
-        _logger.LogDebug($" BackService is initial.");
-        // Constructor's parameters validations...
+        _logger.LogDebug($" BackService is initial.");       
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

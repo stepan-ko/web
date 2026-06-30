@@ -132,7 +132,7 @@ public class CameraManager
                         Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
 
                         // Обновляем активные номера в памяти  
-                       plateAnalyse.Detect(plate.PlateNumber);
+                       plateAnalyse.Detect(plate);
                     }    
                 }
                 plateAnalyse.Lost(); // Проверка что номер покинул кадр

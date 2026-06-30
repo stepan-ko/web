@@ -6,5 +6,13 @@ public class PlateDetect
     public bool IsActive { get; set; } 
     public double BestProbability { get; set; }
     public byte[]? BestImageBytes { get; set; }
+    public void UpdateBest(double nowProb, byte[]? bytes)
+    {
+        if (nowProb > BestProbability)
+        {
+            BestProbability = nowProb;
+            BestImageBytes = bytes;
+        }
+    }
 }
    
