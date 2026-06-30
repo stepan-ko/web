@@ -14,11 +14,13 @@ public class CameraManager
     private readonly ConcurrentDictionary<int, CameraWorker> _workers = new();
     private CancellationTokenSource? _cts;
     private readonly ILogger<CameraManager> _logger;
-    public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger, FrameBuffer buffer)
+    private readonly IServiceProvider _serviceProvider;
+    public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger, FrameBuffer buffer, IServiceProvider serviceProvider)
     {
         _scopeFactory = scopeFactory;
         _frameBuffer = buffer;
         _logger = logger;
+        _serviceProvider = serviceProvider;
        
     }
 
@@ -87,8 +89,8 @@ public class CameraManager
            
            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
-            PlateAnalyse plateAnalyse = new PlateAnalyse(_logger);
-            plateAnalyse.Init(camera);
+            var plateAnalyse = _serviceProvider.GetRequiredService<PlateAnalyse>();
+                plateAnalyse.Init(camera);
 
             while (!token.IsCancellationRequested)
             {

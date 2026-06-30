@@ -8,14 +8,15 @@ public class PlateAnalyse
     
     private Dictionary<string, PlateDetect> _activeTracks = new Dictionary<string, PlateDetect>();
     public IPlateEventService _events;
-    private readonly ILogger<CameraManager> logger;
+    private readonly ILogger<PlateAnalyse> _logger;
     private int CameraId;
     private int countFrameDetect ;
     private int timeLost;
 
-    public PlateAnalyse(ILogger<CameraManager> _logger)
+    public PlateAnalyse(ILogger<PlateAnalyse> logger, IPlateEventService events)
     {
-        logger = _logger;
+        _logger = logger;
+        _events = events;
     }
 
 
@@ -44,7 +45,7 @@ public void Detect(string plateNumber)
             {
                 // Значит Определаем что он АКТИВНЫЙЙ
                _activeTracks[key].IsActive = true;
-               logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);    
+               _logger.LogDebug(key + ", ОБНАРУЖЕН - " + DateTime.Now);    
 
                 // _events.Raise(new PlateEvent
                 // {
@@ -66,7 +67,7 @@ public void Detect(string plateNumber)
             IsActive = false
         };
         _activeTracks.Add(key,plateDetect);
-        logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
+        _logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
         
         // _events.Raise(new PlateEvent
         // {
@@ -89,7 +90,7 @@ public void Detect(string plateNumber)
 
             if (timeDiff > TimeSpan.FromSeconds(timeLost))
             {                
-                logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}");
+                _logger.LogDebug($"{track.Key} ПОКИНУЛ КАДР в {timeNow} , разница времени {timeDiff}, последний раз в {track.Value.LastDetect}");
 
                 // _events.Raise(new PlateEvent
                 // {
