@@ -18,5 +18,6 @@ public class PlateEvent
     public double BestProbability { get; set; }
 
     public byte[]? BestImageBytes { get; set; }
+    public byte[]? BestFrameBytes { get; set; }
     
 }

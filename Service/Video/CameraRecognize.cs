@@ -77,9 +77,12 @@ public class CameraRecognize: IDisposable
                     TrackerId = plate.Data.Identifier,
                     PlateNumber = plate.Data.PlateText,
                     Probability = plate.Data.Probability,
-                    BestImageBytes = AitImageConverter.ToJpeg(plate.BestImage)
+                    BestImageBytes = AitImageConverter.ToJpeg(plate.BestImage)                    
                 };
                 
+                Cv2.ImEncode(".jpg", frame, out byte[] buffer);
+                plateResult.BestFrameBytes = buffer;
+
                 plateResults.Add(plateResult);              
                 
                 string msg = $"Кадр: {FrameId}" + Environment.NewLine +

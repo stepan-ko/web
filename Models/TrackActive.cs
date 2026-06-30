@@ -18,6 +18,7 @@ public class TrackActive
 
     // лучший кадр
     public byte[]? BestImageBytes { get; set; }
+    public byte[]? BestFrameBytes { get; set; }
 
     public Rect RectPlate { get; set; }
 

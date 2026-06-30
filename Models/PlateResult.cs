@@ -12,4 +12,6 @@ public class PlateResult
 
     public byte[]? BestImageBytes { get; set; }
 
+    public byte[]? BestFrameBytes { get; set; }
+
 }

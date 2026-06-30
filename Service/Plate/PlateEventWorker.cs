@@ -74,9 +74,18 @@ public class PlateEventWorker : BackgroundService
                             track.PlateNumber,
                             track.CameraId
                         );
-
                         track.BestImagePath = path;
-                    }                  
+                    }    
+
+                     if (evt.BestFrameBytes != null)
+                    {
+                        var path = await _imageStorage.SaveFrameAsync(
+                            evt.BestFrameBytes,
+                            track.PlateNumber,
+                            track.CameraId
+                        );
+                        track.BestFramePath = path;
+                    }               
                 }                    
                 break;
         }

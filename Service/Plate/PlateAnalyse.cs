@@ -39,7 +39,7 @@ public void Detect(PlateResult plateResult)
         {
             // Номер уже был, обновляем данные 
             _activeTracks[key].LastDetect = DateTime.UtcNow; 
-            _activeTracks[key].UpdateBest(plateResult.Probability, plateResult.BestImageBytes);          
+            _activeTracks[key].UpdateBest(plateResult.Probability, plateResult.BestImageBytes, plateResult.BestFrameBytes);          
 
             if (!_activeTracks[key].IsActive && ++_activeTracks[key].CountFrame > countFrameDetect)
             {
@@ -67,7 +67,7 @@ public void Detect(PlateResult plateResult)
             LastDetect = DateTime.UtcNow,
             IsActive = false,                       
         };
-        plateDetect.UpdateBest(plateResult.Probability, plateResult.BestImageBytes);
+        plateDetect.UpdateBest(plateResult.Probability, plateResult.BestImageBytes, plateResult.BestFrameBytes);
         _activeTracks.Add(key,plateDetect);
         _logger.LogDebug(key + ", ПЕРВЫЙ КАДР в = " + _activeTracks[key].FirstDetect);
         
@@ -102,7 +102,8 @@ public void Detect(PlateResult plateResult)
                     Type = PlateEventType.Lost,
                     Timestamp = timeNow,
                     BestProbability = track.Value.BestProbability,
-                    BestImageBytes = track.Value.BestImageBytes
+                    BestImageBytes = track.Value.BestImageBytes,      
+                    BestFrameBytes = track.Value.BestFrameBytes         
                 });
 
                 _activeTracks.Remove(track.Key);

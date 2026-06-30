@@ -18,7 +18,10 @@ public class TrackRecognize
     // максимальная вероятность за всю сессию
     public double BestProbability { get; set; }
 
-    // лучший кадр
+    // лучший номер картинка
     public string? BestImagePath { get; set; }
+
+    // лучший кадр
+    public string? BestFramePath { get; set; }
 
 }
