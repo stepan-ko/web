@@ -29,8 +29,6 @@ builder.Logging.SetMinimumLevel(LogLevel.Information);
 builder.Services.AddHostedService<BackService>();
 builder.Services.AddHostedService<PlateEventWorker>();
 
-Debug.WriteLine("// Регистрация фоновой службы");
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
