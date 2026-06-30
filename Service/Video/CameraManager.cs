@@ -43,7 +43,7 @@ public class CameraManager
 
         var psi = new ProcessStartInfo
         {
-            FileName = "ffmpeg",
+           FileName = "ffmpeg",
             Arguments =
                 rtspOpt +
                 "-fflags +nobuffer+discardcorrupt " +

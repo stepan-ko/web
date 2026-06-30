@@ -67,25 +67,25 @@ public class PlateEventWorker : BackgroundService
                     track.LeftAt = evt.Timestamp;
                     track.BestProbability = evt.BestProbability;
                     
-                     if (evt.BestImageBytes != null)
-                    {
-                        var path = await _imageStorage.SavePlateAsync(
-                            evt.BestImageBytes,
-                            track.PlateNumber,
-                            track.CameraId
-                        );
-                        track.BestImagePath = path;
-                    }    
+                    //  if (evt.BestImageBytes != null)
+                    // {
+                    //     var path = await _imageStorage.SavePlateAsync(
+                    //         evt.BestImageBytes,
+                    //         track.PlateNumber,
+                    //         track.CameraId
+                    //     );
+                    //     track.BestImagePath = path;
+                    // }    
 
-                     if (evt.BestFrameBytes != null)
-                    {
-                        var path = await _imageStorage.SaveFrameAsync(
-                            evt.BestFrameBytes,
-                            track.PlateNumber,
-                            track.CameraId
-                        );
-                        track.BestFramePath = path;
-                    }               
+                    //  if (evt.BestFrameBytes != null)
+                    // {
+                    //     var path = await _imageStorage.SaveFrameAsync(
+                    //         evt.BestFrameBytes,
+                    //         track.PlateNumber,
+                    //         track.CameraId
+                    //     );
+                    //     track.BestFramePath = path;
+                    // }               
                 }                    
                 break;
         }
