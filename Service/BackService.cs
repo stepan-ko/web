@@ -25,7 +25,7 @@ public class BackService : BackgroundService
 
         try
         {        
-            CameraRecognize.Configure(2, _logger); // 4 - потока.
+            CameraRecognize.Configure(4, _logger); // 4 - потока.
 
             await _cameraManager.StartAsync(stoppingToken);
             await Task.Delay(Timeout.Infinite, stoppingToken);
