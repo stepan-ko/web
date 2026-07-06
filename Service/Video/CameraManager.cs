@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-
+using System.Runtime.InteropServices;
 
 public class CameraManager
 {
@@ -28,10 +28,9 @@ public class CameraManager
     private Mat? _latestFrame;
     private readonly object _frameLock = new(); 
     
-   private async Task ProcessCameraInternal(Camera camera, CancellationToken token)
-    {   
-       
-        _logger.LogDebug("Запуск обработки видео камеры {Name}",camera.Name);
+    private async Task ProcessCameraInternal(Camera camera, CancellationToken token)
+    {
+        _logger.LogDebug("Запуск обработки видео камеры {Name}", camera.Name);
         _logger.LogDebug("Адрес видеопотока: {camera.StreamUrl}", camera.StreamUrl);
 
         var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase)
@@ -40,13 +39,17 @@ public class CameraManager
 
         int width = camera.Width != 0 ? camera.Width : 1280;
         int height = camera.Height != 0 ? camera.Height : 720;
-        int fps = camera.Fps != 0 ? camera.Fps : 5; // частота кадров для распознавания/превью, можно вынести в camera.Option
-        int frameSize = width * height * 3; // bgr24 = 3 байта на пиксель
+        int fps = camera.Fps != 0 ? camera.Fps : 5;
+        int frameSize = width * height * 3;
 
+        // локальные для этой камеры — не общие на весь CameraManager
+        var frameSignal = new SemaphoreSlim(0, 1);
+        Mat? latestFrame = null;
+        var frameLock = new object();
 
         var psi = new ProcessStartInfo
         {
-           FileName = "ffmpeg",
+            FileName = "ffmpeg",
             Arguments =
                 rtspOpt +
                 "-fflags +nobuffer+discardcorrupt " +
@@ -75,7 +78,6 @@ public class CameraManager
                 return;
             }
 
-            // читаем stderr отдельно, иначе при заполнении буфера канала ffmpeg зависнет
             _ = Task.Run(async () =>
             {
                 try
@@ -84,24 +86,91 @@ public class CameraManager
                     // while ((line = await process.StandardError.ReadLineAsync()) != null)
                     //     _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
                 }
-                catch { /* процесс завершился — это нормально */ }
+                catch { }
             });
 
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
-           
-           using var cameraRecognize = new CameraRecognize(camera, _logger);
+
+            using var cameraRecognize = new CameraRecognize(camera, _logger);
 
             var plateAnalyse = _serviceProvider.GetRequiredService<PlateAnalyse>();
-                plateAnalyse.Init(camera);
+            plateAnalyse.Init(camera);
 
+            // --- Задача обработки кадров (в отдельном потоке от чтения) ---
+            var processingTask = Task.Run(async () =>
+            {
+                var sw = Stopwatch.StartNew();
+                int processedCount = 0;
+
+                while (!token.IsCancellationRequested)
+                {
+                    await frameSignal.WaitAsync(token);
+
+                    Mat? frame;
+                    lock (frameLock)
+                    {
+                        frame = latestFrame;
+                        latestFrame = null;
+                    }
+
+                    if (frame == null) continue;
+
+                    using (frame)
+                    {
+                        if (!camera.Simulate)
+                        {
+                            List<PlateResult> platesResult = cameraRecognize.RecognizePlate(frame);
+
+                            foreach (var plate in platesResult)
+                            {
+                                Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
+                                plateAnalyse.Detect(plate);
+                            }
+                        }
+                        plateAnalyse.Lost();
+
+                        if (camera.Option.UseArea)
+                        {
+                            var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
+                                                camera.Option.AreaWidth, camera.Option.AreaHeight);
+                            Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                        }
+
+                        string fpsText = $"FPS: {fps}";
+                        var font = HersheyFonts.HersheySimplex;
+                        double fontScale = 0.7;
+                        int thickness = 2;
+                        int margin = 10;
+
+                        var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
+                        int x = frame.Width - textSize.Width - margin;
+                        int y = margin + textSize.Height;
+
+                        Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
+
+                        Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
+                        _frameBuffer.SetFrame(camera.Id, outBytes);
+                    }
+
+                    processedCount++;
+                    if (sw.ElapsedMilliseconds >= 1000)
+                    {
+                        double actualFps = processedCount / (sw.ElapsedMilliseconds / 1000.0);
+                        _logger.LogDebug("[{Name}] Обработка: {Fps:F1} FPS", camera.Name, actualFps);
+                        processedCount = 0;
+                        sw.Restart();
+                    }
+                }
+            }, token);
+
+            // --- Цикл чтения кадров из ffmpeg (быстрый, без тяжёлой обработки) ---
             while (!token.IsCancellationRequested)
             {
                 int read = 0;
                 while (read < frameSize)
-                {                   
+                {
                     int r = await stream.ReadAsync(buffer, read, frameSize - read, token);
-                                        
                     if (r == 0) break;
                     read += r;
                 }
@@ -113,90 +182,26 @@ public class CameraManager
                 }
                 if (read < frameSize)
                 {
-                    // неполный кадр в конце (например, поток только что обрвался) — пропускаем
                     _logger.LogWarning($"[{camera.Name}] Получен неполный кадр: {read}/{frameSize} байт");
                     continue;
                 }
 
-               var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer.Clone()); // копия, т.к. buffer переиспользуется
+                var frameData = (byte[])buffer.Clone();
+                var frame = new Mat(height, width, MatType.CV_8UC3);
+                Marshal.Copy(frameData, 0, frame.Data, frameData.Length);
 
-                lock (_frameLock)
+                lock (frameLock)
                 {
-                    _latestFrame?.Dispose(); // старый необработанный кадр отбрасываем
-                    _latestFrame = frame;
+                    latestFrame?.Dispose();
+                    latestFrame = frame;
                 }
 
-                if (_frameSignal.CurrentCount == 0)
-                    _frameSignal.Release();
-            }    
-                //Тут обработка frame сторонней библиотекой поиска номера авто 
-                
-                //  _logger.LogTrace($"количество кадров: {cnt++}");
+                if (frameSignal.CurrentCount == 0)
+                    frameSignal.Release();
+            }
 
-            // --- Отдельная задача обработки ---
-            _ = Task.Run(async () =>
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    await _frameSignal.WaitAsync(token);
-
-                    Mat? frame;
-                    lock (_frameLock)
-                    {
-                        frame = _latestFrame;
-                        _latestFrame = null;
-                    }
-
-                    if (frame == null) continue;
-
-                    using (frame)
-                    {                        
-                        if (!camera.Simulate)
-                        {  
-                        List<PlateResult> platesResult = new List<PlateResult>();
-                        platesResult = cameraRecognize.RecognizePlate(frame);
-
-                        foreach (var plate in platesResult)
-                            {     
-                                // рисуем прямоугольник вокруг номера
-                                Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
-
-                                // Обновляем активные номера в памяти  
-                            plateAnalyse.Detect(plate);
-                            }    
-                        }
-                        plateAnalyse.Lost(); // Проверка что номер покинул кадр
-
-                        if (camera.Option.UseArea)
-                        {
-                            var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
-                                                camera.Option.AreaWidth, camera.Option.AreaHeight);
-                            Cv2.Rectangle(frame, border, Scalar.Blue, 1);
-                        }
-
-                        string fpsText = $"FPS: {fps}";
-
-                        var font = HersheyFonts.HersheySimplex;
-                        double fontScale = 0.7;
-                        int thickness = 2;
-                        int margin = 10;
-
-                        var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
-
-                        int x = frame.Width - textSize.Width - margin;
-                        int y = margin + textSize.Height;
-
-                        Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
-                        
-                        Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
-                        _frameBuffer.SetFrame(camera.Id, outBytes);                    
-                    }
-                }
-            });
-
-
-               
-            
+            // ждём завершения задачи обработки при остановке камеры
+            try { await processingTask; } catch (OperationCanceledException) { }
         }
         catch (OperationCanceledException)
         {
@@ -211,12 +216,11 @@ public class CameraManager
             if (process != null && !process.HasExited)
             {
                 try { process.Kill(entireProcessTree: true); }
-                catch { /* процесс уже мог завершиться сам */ }
+                catch { }
             }
             process?.Dispose();
         }
     }
-
     private async Task ProcessCamera(Camera camera, CancellationToken token)
     {
         while (!token.IsCancellationRequested)
