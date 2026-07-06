@@ -24,6 +24,9 @@ public class CameraManager
        
     }
 
+    private readonly SemaphoreSlim _frameSignal = new(0, 1);
+    private Mat? _latestFrame;
+    private readonly object _frameLock = new(); 
     
    private async Task ProcessCameraInternal(Camera camera, CancellationToken token)
     {   
@@ -115,52 +118,85 @@ public class CameraManager
                     continue;
                 }
 
-                using var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer);
-                
+               var frame = Mat.FromPixelData(height, width, MatType.CV_8UC3, buffer.Clone()); // копия, т.к. buffer переиспользуется
+
+                lock (_frameLock)
+                {
+                    _latestFrame?.Dispose(); // старый необработанный кадр отбрасываем
+                    _latestFrame = frame;
+                }
+
+                if (_frameSignal.CurrentCount == 0)
+                    _frameSignal.Release();
+            }    
                 //Тут обработка frame сторонней библиотекой поиска номера авто 
                 
                 //  _logger.LogTrace($"количество кадров: {cnt++}");
-               
-                if (!camera.Simulate)
-                {  
-                   List<PlateResult> platesResult = new List<PlateResult>();
-                   platesResult = cameraRecognize.RecognizePlate(frame);
 
-                   foreach (var plate in platesResult)
-                    {     
-                        // рисуем прямоугольник вокруг номера
-                        Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
-
-                        // Обновляем активные номера в памяти  
-                       plateAnalyse.Detect(plate);
-                    }    
-                }
-                plateAnalyse.Lost(); // Проверка что номер покинул кадр
-
-                if (camera.Option.UseArea)
+            // --- Отдельная задача обработки ---
+            _ = Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
                 {
-                    var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
-                                        camera.Option.AreaWidth, camera.Option.AreaHeight);
-                    Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                    await _frameSignal.WaitAsync(token);
+
+                    Mat? frame;
+                    lock (_frameLock)
+                    {
+                        frame = _latestFrame;
+                        _latestFrame = null;
+                    }
+
+                    if (frame == null) continue;
+
+                    using (frame)
+                    {                        
+                        if (!camera.Simulate)
+                        {  
+                        List<PlateResult> platesResult = new List<PlateResult>();
+                        platesResult = cameraRecognize.RecognizePlate(frame);
+
+                        foreach (var plate in platesResult)
+                            {     
+                                // рисуем прямоугольник вокруг номера
+                                Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
+
+                                // Обновляем активные номера в памяти  
+                            plateAnalyse.Detect(plate);
+                            }    
+                        }
+                        plateAnalyse.Lost(); // Проверка что номер покинул кадр
+
+                        if (camera.Option.UseArea)
+                        {
+                            var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
+                                                camera.Option.AreaWidth, camera.Option.AreaHeight);
+                            Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                        }
+
+                        string fpsText = $"FPS: {fps}";
+
+                        var font = HersheyFonts.HersheySimplex;
+                        double fontScale = 0.7;
+                        int thickness = 2;
+                        int margin = 10;
+
+                        var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
+
+                        int x = frame.Width - textSize.Width - margin;
+                        int y = margin + textSize.Height;
+
+                        Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
+                        
+                        Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
+                        _frameBuffer.SetFrame(camera.Id, outBytes);                    
+                    }
                 }
+            });
 
-                string fpsText = $"FPS: {fps}";
 
-                var font = HersheyFonts.HersheySimplex;
-                double fontScale = 0.7;
-                int thickness = 2;
-                int margin = 10;
-
-                var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
-
-                int x = frame.Width - textSize.Width - margin;
-                int y = margin + textSize.Height;
-
-                Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
-                
-                Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
-                _frameBuffer.SetFrame(camera.Id, outBytes);
-            }
+               
+            
         }
         catch (OperationCanceledException)
         {
