@@ -3,6 +3,7 @@ using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading.Channels;
 
 public class CameraManager
 {
@@ -52,7 +53,7 @@ public class CameraManager
             FileName = "ffmpeg",
             Arguments =
                 rtspOpt +
-                "-fflags +nobuffer+discardcorrupt " +
+                "-fflags discardcorrupt " +
                 "-flags low_delay " +
                 "-analyzeduration 1000000 " +
                 "-probesize 1000000 " +
@@ -96,7 +97,17 @@ public class CameraManager
 
             var plateAnalyse = _serviceProvider.GetRequiredService<PlateAnalyse>();
             plateAnalyse.Init(camera);
-
+            
+            // - для отображения fps
+            var font = HersheyFonts.HersheySimplex;
+            double fontScale = 0.7;
+            int thickness = 2;
+            int margin = 10;
+            string fpsText = $"FPS: {fps}";
+            var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
+                        int x = camera.Width - textSize.Width - margin;
+                        int y = margin + textSize.Height;
+            //
             // --- Задача обработки кадров (в отдельном потоке от чтения) ---
             var processingTask = Task.Run(async () =>
             {
@@ -129,7 +140,7 @@ public class CameraManager
                             }
                         }
                         plateAnalyse.Lost();
-
+                        
                         if (camera.Option.UseArea)
                         {
                             var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
@@ -137,20 +148,11 @@ public class CameraManager
                             Cv2.Rectangle(frame, border, Scalar.Blue, 1);
                         }
 
-                        string fpsText = $"FPS: {fps}";
-                        var font = HersheyFonts.HersheySimplex;
-                        double fontScale = 0.7;
-                        int thickness = 2;
-                        int margin = 10;
-
-                        var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
-                        int x = frame.Width - textSize.Width - margin;
-                        int y = margin + textSize.Height;
-
                         Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
-
+                        
                         Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
                         _frameBuffer.SetFrame(camera.Id, outBytes);
+
                     }
 
                     processedCount++;
@@ -241,7 +243,7 @@ public class CameraManager
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(2), token);
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
             }
             catch (OperationCanceledException)
             {
