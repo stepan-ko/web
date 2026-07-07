@@ -3,36 +3,34 @@ using OpenCvSharp;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading.Channels;
+using System.Threading.Channels; // Обязательно добавить этот namespace
 
 public class CameraManager
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly FrameBuffer _frameBuffer;
-   
-
-    // private readonly Dictionary<int, Task> _cameraTasks = new();
+    
     private readonly ConcurrentDictionary<int, CameraWorker> _workers = new();
     private CancellationTokenSource? _cts;
     private readonly ILogger<CameraManager> _logger;
     private readonly IServiceProvider _serviceProvider;
+
     public CameraManager(IServiceScopeFactory scopeFactory, ILogger<CameraManager> logger, FrameBuffer buffer, IServiceProvider serviceProvider)
     {
         _scopeFactory = scopeFactory;
         _frameBuffer = buffer;
         _logger = logger;
         _serviceProvider = serviceProvider;
-       
     }
 
-    private readonly SemaphoreSlim _frameSignal = new(0, 1);
-    private Mat? _latestFrame;
-    private readonly object _frameLock = new(); 
-    
+    private static readonly int[] JpegParams = {
+        (int)ImwriteFlags.JpegQuality,
+        95 // Можно снизить до 70 для ускорения ImEncode
+    };
+
     private async Task ProcessCameraInternal(Camera camera, CancellationToken token)
     {
         _logger.LogDebug("Запуск обработки видео камеры {Name}", camera.Name);
-        _logger.LogDebug("Адрес видеопотока: {camera.StreamUrl}", camera.StreamUrl);
 
         var rtspOpt = camera.StreamUrl.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase)
             ? "-rtsp_transport tcp "
@@ -40,13 +38,21 @@ public class CameraManager
 
         int width = camera.Width != 0 ? camera.Width : 1280;
         int height = camera.Height != 0 ? camera.Height : 720;
-        int fps = camera.Fps != 0 ? camera.Fps : 5;
-        int frameSize = width * height * 3;
+        // int fps = camera.Fps != 0 ? camera.Fps : 5; // В новом подходе мы не полагаемся на жесткий FPS из конфига для логики
+        
+        int frameSize = width * height * 3; // BGR24
 
-        // локальные для этой камеры — не общие на весь CameraManager
-        var frameSignal = new SemaphoreSlim(0, 1);
-        Mat? latestFrame = null;
-        var frameLock = new object();
+        // --- НАСТРОЙКА КАНАЛА (Очередь кадров) ---
+        // BoundedChannelOptions:
+        // Capacity: макс количество кадров в очереди (буфер). 8-16 - хороший баланс.
+        // FullMode: DropOldest - если очередь полна, выкидываем СТАРЫЙ кадр, чтобы новый мог войти.
+        // Это критически важно: поток чтения никогда не ждет!
+        var channelOptions = new BoundedChannelOptions(16)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest
+        };
+        
+        var frameChannel = Channel.CreateBounded<Mat>(channelOptions);
 
         var psi = new ProcessStartInfo
         {
@@ -59,7 +65,8 @@ public class CameraManager
                 "-probesize 1000000 " +
                 $"-i \"{camera.StreamUrl}\" " +
                 "-an -sn -dn " +
-                $"-vf fps={camera.Fps} " +
+                // Убрал фильтр -vf fps={camera.Fps}. Пусть ffmpeg отдает кадры как есть.
+                // Пропуск кадров будет контролироваться C# логикой (каналом).
                 "-pix_fmt bgr24 " +
                 "-f rawvideo -",
             RedirectStandardOutput = true,
@@ -79,86 +86,83 @@ public class CameraManager
                 return;
             }
 
+            // Игнорируем stderr для краткости, но в продакшене лучше логировать ошибки ffmpeg асинхронно
             _ = Task.Run(async () =>
             {
-                try
+                string? line;
+                while ((line = await process?.StandardError.ReadLineAsync()) != null && !token.IsCancellationRequested)
                 {
-                    // string? line;
-                    // while ((line = await process.StandardError.ReadLineAsync()) != null)
-                    //     _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
+                    // Можно раскомментировать, если нужны детальные логи ffmpeg
+                    // _logger.LogWarning($"[ffmpeg:{camera.Name}] {line}");
                 }
-                catch { }
-            });
+            }, token);
 
             var stream = process.StandardOutput.BaseStream;
             var buffer = new byte[frameSize];
 
-            using var cameraRecognize = new CameraRecognize(camera, _logger);
-
+            using var cameraRecognize = camera.Simulate ? null : new CameraRecognize(camera, _logger);
             var plateAnalyse = _serviceProvider.GetRequiredService<PlateAnalyse>();
             plateAnalyse.Init(camera);
             
-            // - для отображения fps
+            // Подготовка текста FPS (вычисляем один раз)
             var font = HersheyFonts.HersheySimplex;
             double fontScale = 0.7;
             int thickness = 2;
-            int margin = 10;
-            string fpsText = $"FPS: {fps}";
+            int margin = 50;
+            string fpsText = $"FPS: {camera.Fps}"; 
             var textSize = Cv2.GetTextSize(fpsText, font, fontScale, thickness, out int baseline);
-                        int x = camera.Width - textSize.Width - margin;
-                        int y = margin + textSize.Height;
-            //
-            // --- Задача обработки кадров (в отдельном потоке от чтения) ---
+            int x = width - textSize.Width - margin;
+            int y = margin + textSize.Height;
+
+            // --- ЗАДАЧА ОБРАБОТКИ КАДРОВ (Фоновый воркер) ---
             var processingTask = Task.Run(async () =>
             {
                 var sw = Stopwatch.StartNew();
                 int processedCount = 0;
-
-                while (!token.IsCancellationRequested)
+                double actualFps = 0.0;
+                // Читаем из канала. Если канал закрыт или токен отменен - цикл завершится
+                await foreach (var frame in frameChannel.Reader.ReadAllAsync(token))
                 {
-                    await frameSignal.WaitAsync(token);
-
-                    Mat? frame;
-                    lock (frameLock)
+                    if (!camera.Simulate)
                     {
-                        frame = latestFrame;
-                        latestFrame = null;
-                    }
-
-                    if (frame == null) continue;
-
-                    using (frame)
-                    {
-                        if (!camera.Simulate)
+                        using (frame) // Гарантированный Dispose() даже при ошибке
                         {
-                            List<PlateResult> platesResult = cameraRecognize.RecognizePlate(frame);
-
-                            foreach (var plate in platesResult)
+                            // 1. Распознавание (тяжелая операция)
+                            if (!camera.Simulate)
                             {
-                                Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
-                                plateAnalyse.Detect(plate);
+                                List<PlateResult> platesResult = cameraRecognize.RecognizePlate(frame);
+
+                                foreach (var plate in platesResult)
+                                {
+                                    Cv2.Rectangle(frame, plate.RectPlate, Scalar.Yellow, 2);
+                                    plateAnalyse.Detect(plate);
+                                }
+                            }
+                            plateAnalyse.Lost();
+                            if (!camera.Simulate)
+                            {
+                                // 2. Отрисовка зоны
+                                if (camera.Option.UseArea)
+                                {
+                                    var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
+                                                        camera.Option.AreaWidth, camera.Option.AreaHeight);
+                                    Cv2.Rectangle(frame, border, Scalar.Blue, 1);
+                                }
+
+                                // 3. Отрисовка FPS
+                                Cv2.PutText(frame,  $"FPS: {Math.Round(actualFps)}", new Point(x, y), font, fontScale, Scalar.White, thickness);
+                                
+                                // 4. Кодирование и сохранение (тоже тяжелая операция)
+                                Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
+                                _frameBuffer.SetFrame(camera.Id, outBytes);
                             }
                         }
-                        plateAnalyse.Lost();
-                        
-                        if (camera.Option.UseArea)
-                        {
-                            var border = new Rect(camera.Option.AreaX, camera.Option.AreaY,
-                                                camera.Option.AreaWidth, camera.Option.AreaHeight);
-                            Cv2.Rectangle(frame, border, Scalar.Blue, 1);
-                        }
-
-                        Cv2.PutText(frame, fpsText, new Point(x, y), font, fontScale, Scalar.White, thickness);
-                        
-                        Cv2.ImEncode(".jpg", frame, out var outBytes, JpegParams);
-                        _frameBuffer.SetFrame(camera.Id, outBytes);
-
                     }
 
                     processedCount++;
                     if (sw.ElapsedMilliseconds >= 1000)
                     {
-                        double actualFps = processedCount / (sw.ElapsedMilliseconds / 1000.0);
+                        actualFps = processedCount / (sw.ElapsedMilliseconds / 1000.0);
                         _logger.LogDebug("[{Name}] Обработка: {Fps:F1} FPS", camera.Name, actualFps);
                         processedCount = 0;
                         sw.Restart();
@@ -166,14 +170,15 @@ public class CameraManager
                 }
             }, token);
 
-            // --- Цикл чтения кадров из ffmpeg (быстрый, без тяжёлой обработки) ---
+            // --- ЦИКЛ ЧТЕНИЯ КАДРОВ (Максимально быстрый, без блокировок) ---
             while (!token.IsCancellationRequested)
             {
                 int read = 0;
+                // Читаем ровно столько, сколько нужно для одного кадра
                 while (read < frameSize)
                 {
                     int r = await stream.ReadAsync(buffer, read, frameSize - read, token);
-                    if (r == 0) break;
+                    if (r == 0) break; // Конец потока
                     read += r;
                 }
 
@@ -182,28 +187,44 @@ public class CameraManager
                     _logger.LogWarning($"[{camera.Name}] FFmpeg stream broken");
                     break;
                 }
+                
                 if (read < frameSize)
                 {
                     _logger.LogWarning($"[{camera.Name}] Получен неполный кадр: {read}/{frameSize} байт");
                     continue;
                 }
 
-                var frameData = (byte[])buffer.Clone();
+                // Создаем Mat из буфера
                 var frame = new Mat(height, width, MatType.CV_8UC3);
-                Marshal.Copy(frameData, 0, frame.Data, frameData.Length);
+                Marshal.Copy(buffer, 0, frame.Data, buffer.Length);
 
-                lock (frameLock)
+                // Пытаемся записать в канал
+                // TryWrite возвращает false, если канал полон. 
+                // В этом случае мы НЕ ждем, а сразу уничтожаем кадр и идем дальше.
+                if (!frameChannel.Writer.TryWrite(frame))
                 {
-                    latestFrame?.Dispose();
-                    latestFrame = frame;
+                    // Канал переполнен (система не успевает обрабатывать).
+                    // Мы жертвуем этим кадром, чтобы поток чтения не встал.
+                    frame.Dispose(); 
+                    // Опционально: можно залогировать факт пропуска, но не часто, чтобы не спамить лог
+                    // _logger.LogTrace("Пропущен кадр из-за перегрузки обработчика");
+                    continue; 
                 }
-
-                if (frameSignal.CurrentCount == 0)
-                    frameSignal.Release();
+                // Если TryWrite вернул true, кадр передан в обработку. Dispose() сделает воркер.
             }
 
-            // ждём завершения задачи обработки при остановке камеры
-            try { await processingTask; } catch (OperationCanceledException) { }
+            // Сигнализируем воркеру, что новых кадров не будет
+            frameChannel.Writer.Complete();
+
+            // Ждем завершения обработки оставшихся кадров в очереди
+            try 
+            { 
+                await processingTask; 
+            } 
+            catch (OperationCanceledException) 
+            { 
+                // Нормальная ситуация при остановке
+            }
         }
         catch (OperationCanceledException)
         {
@@ -223,6 +244,10 @@ public class CameraManager
             process?.Dispose();
         }
     }
+
+    // Остальные методы (ProcessCamera, StartAsync, StopAsync и т.д.) остаются без изменений,
+    // так как они только управляют жизненным циклом ProcessCameraInternal.
+    
     private async Task ProcessCamera(Camera camera, CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -252,57 +277,34 @@ public class CameraManager
         }
     }
 
-
     public async Task StartAsync(CancellationToken token)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
-
         var cameras = await LoadCameras();
-
         foreach (var camera in cameras)
         {
             StartCamera(camera);
         }
-
-        _logger.LogInformation(
-            "Запущено камер: {Count}",
-            cameras.Count);
+        _logger.LogInformation("Запущено камер: {Count}", cameras.Count);
     }
 
-   public async Task StopAsync()
+    public async Task StopAsync()
     {
-        if (_workers.IsEmpty)
-            return;
-
+        if (_workers.IsEmpty) return;
         _logger.LogInformation("Остановка всех камер...");
-
-        foreach (var worker in _workers.Values)
-        {
-            worker.Cts?.Cancel();
-        }
-
+        foreach (var worker in _workers.Values) worker.Cts?.Cancel();
+        
         var tasks = _workers.Values
             .Where(x => x.Task != null)
             .Select(x => x.Task!);
 
-        try
-        {
-            await Task.WhenAll(tasks);
-        }
-        catch (OperationCanceledException)
-        {
-            // Нормальная ситуация при остановке
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Ошибка при остановке камер");
-        }
+        try { await Task.WhenAll(tasks); }
+        catch (OperationCanceledException) {}
+        catch (Exception ex) { _logger.LogError(ex, "Ошибка при остановке камер"); }
 
         _workers.Clear();
-
         _cts?.Dispose();
         _cts = null;
-
         _logger.LogInformation("Все камеры остановлены");
     }
 
@@ -310,59 +312,30 @@ public class CameraManager
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
         return await db.Cameras
             .Include(c => c.Option)
             .Where(c => c.Enable)
             .ToListAsync();
     }
 
-    private static readonly int[] JpegParams = {
-        (int)ImwriteFlags.JpegQuality,
-        80
-    };
-
     public void StartCamera(Camera camera)
     {
-        if (!camera.Enable)
-            return;
-
-        if (_workers.ContainsKey(camera.Id))
-            return;
+        if (!camera.Enable) return;
+        if (_workers.ContainsKey(camera.Id)) return;
 
         var cts = new CancellationTokenSource();
-
-        var worker = new CameraWorker
-        {
-            Camera = camera,
-            Cts = cts
-        };
+        var worker = new CameraWorker { Camera = camera, Cts = cts };
 
         worker.Task = Task.Run(async () =>
         {
-            try
-            {
-                await ProcessCamera(camera, cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                _logger.LogInformation(
-                    "Камера {Name} остановлена",
-                    camera.Name);
-            }
-            catch (Exception ex)
-            {
+            try { await ProcessCamera(camera, cts.Token); }
+            catch (OperationCanceledException) { _logger.LogInformation("Камера {Name} остановлена", camera.Name); }
+            catch (Exception ex) 
+            { 
                 worker.LastError = ex.Message;
-
-                _logger.LogError(
-                    ex,
-                    "Ошибка камеры {Name}",
-                    camera.Name);
+                _logger.LogError(ex, "Ошибка камеры {Name}", camera.Name); 
             } 
-            finally
-            {
-                _workers.TryRemove(camera.Id, out _);
-            }
+            finally { _workers.TryRemove(camera.Id, out _); }
         });
 
         if (!_workers.TryAdd(camera.Id, worker))
@@ -370,26 +343,16 @@ public class CameraManager
             cts.Cancel();
             return;
         }
-
-        _logger.LogInformation(
-            "Камера {Name} запущена",
-            camera.Name);
+        _logger.LogInformation("Камера {Name} запущена", camera.Name);
     }
 
     public async Task StopCamera(int cameraId)
     {
-        if (!_workers.TryGetValue(cameraId, out var worker))
-            return;
+        if (!_workers.TryGetValue(cameraId, out var worker)) return;
         worker.Cts?.Cancel();
         if (worker.Task != null)
         {
-            try
-            {
-                await worker.Task;
-            }
-            catch
-            {
-            }
+            try { await worker.Task; } catch { }
         }
         _workers.TryRemove(cameraId, out _);
     }
@@ -397,18 +360,11 @@ public class CameraManager
     public async Task RestartCamera(Camera camera)
     {
         await StopCamera(camera.Id);
-
         StartCamera(camera);
     }
 
     public bool IsRunning(int cameraId)
     {
-        return _workers.TryGetValue(cameraId, out var worker)
-            && worker.IsRunning;
+        return _workers.TryGetValue(cameraId, out var worker) && worker.IsRunning;
     }
-
-    private ConcurrentDictionary<string, TrackActive> _activeTracks = new ConcurrentDictionary<string, TrackActive>();
-    private int cnt;
-    
-   
 }
