@@ -2,17 +2,17 @@
 
 Ниже представлены ключевые экраны системы управления видеопотоками. Нажмите на изображение, чтобы увеличить его.
 
-[<img src="Result/StreamList.PNG" alt="Список активных видеопотоков" width="800">](Result/StreamList.PNG)
+[<img src="Result/StreamList.PNG" alt="Список активных видеопотоков" width="600">](Result/StreamList.PNG)
 **Экран 1: Список активных видеопотоков.** Общий дашборд со статусом каждого источника.
 
 ***
 
-[<img src="Result/StreamConfig.PNG" alt="Настройки параметров распознавания" width="800">](Result/StreamConfig.PNG)
+[<img src="Result/StreamConfig.PNG" alt="Настройки параметров распознавания" width="600">](Result/StreamConfig.PNG)
 **Экран 2: Настройки параметров распознавания.** Конфигурация OCR-порогов, выбор регионов и типа номерных знаков.
 
 ***
 
-[<img src="Result/StreamResult.PNG" alt="Результат обработки видео с детекцией номеров" width="800">](Result/StreamResult.PNG)
+[<img src="Result/StreamResult.PNG" alt="Результат обработки видео с детекцией номеров" width="600">](Result/StreamResult.PNG)
 **Экран 3: Результат обработки видео.** Просмотр потока в реальном времени с наложенными рамками и распознанным текстом.
 
 ## Описание функционала системы
