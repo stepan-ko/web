@@ -1,73 +1,166 @@
-# Для  новой системы:
-sudo apt update
-sudo apt install dotnet-sdk-10.0
+# Система распознавания автомобильных номеров: запуск и настройка
 
-# Установка основного пакета EF Core
-dotnet add package Microsoft.EntityFrameworkCore
-dotnet add package Microsoft.EntityFrameworkCore.Design
+## Описание функционала системы
 
-# Установка провайдера для SQLite
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+Система предназначена для:
 
-# Установка инструментов EF Core (для миграций)
-dotnet tool install --global dotnet-ef
-dotnet tool update --global dotnet-ef
+* **Запуска сервера** и анализа видеопотока с целью распознавания **автомобильных номеров**.
+* **Сохранения найденных данных** в базу данных **PostgreSQL**.
+* Настроек распознавания через **админпанель сервиса** (веб‑страница).
+* Просмотра видеопотока, который прошёл обработку распознаванием.
 
-# Если пути нет, добавьте его в файл конфигурации оболочки:
-export PATH="$PATH:$HOME/.dotnet/tools"
+---
 
-# Обновить пакеты
-sudo apt update
+## Процесс запуска
 
-# Установка OpenCv
-dotnet add package OpenCvSharp4
-dotnet add package OpenCvSharp4.official.runtime.linux-x64
+### 1. Запуск тестового видеопотока
 
-# Установка libopencv
-sudo apt install libopencv-dev libopencv-videoio-dev
+Для организации тестового видеопотока необходимо выполнить следующие шаги в отдельных терминалах:
 
-# Дополнительно установите системные зависимости, которые могут отсутствовать
-sudo apt install libatomic1 libgtk-3-0 libgl1 libglib2.0-0
-sudo apt install ffmpeg
+1. **Запустить сервер RTSP**:
+   ```bash
+   ./mediamtx
+   ```
 
-# Установите PostgreSQL и пакет расширений postgresql-contrib
-sudo apt install postgresql postgresql-contrib -y
+2. **Остановить сервер RTSP** (при необходимости):
+   ```bash
+   pkill mediamtx
+   ```
 
-# Запустить сервис
-sudo systemctl start postgresql
+3. **Запустить трансляцию видео `cam.mp4`**:
+   * Вариант для локального адреса:
+     ```bash
+     ffmpeg -re -stream_loop -1 -i cam.mp4 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam1
+     ```
+   * Вариант для сетевого адреса:
+     ```bash
+     ffmpeg -re -stream_loop -1 -i cam.mp4 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp rtsp://10.6.173.233:8554/cam1
+     ```
 
-# Сделать автозапуск сервиса
-sudo systemctl enable postgresql
+4. **Запустить необходимое количество видеопотоков** (с разными идентификаторами), меняя конечный адрес на `cam2`, `cam3` и т. д.:
+   ```bash
+   ffmpeg -re -stream_loop -1 -i cam.mp4 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam2
+   ```
 
-# Подключиться к PostgreSQL
-sudo -u postgres psql
+> Трансляция потока RTSP описана в папке `test/rtsp`.
 
-# Задать новый пароль 12345
-ALTER USER postgres WITH PASSWORD '12345';
+---
 
-# Выйти в терминал
-exit
+### 2. Запуск самого проекта
 
-# Создать миграцию (если менялась модель данных для БД)
-dotnet ef migrations add NewMigration
+#### Подготовка окружения и установка зависимостей
 
-# Создать базу данных (сначала задать пароль для postgres)
-dotnet ef database update
+1. Для новой системы обновить репозитории и установить **.NET SDK 10.0**:
+   ```bash
+   sudo apt update
+   sudo apt install dotnet-sdk-10.0
+   ```
 
-# Пересобьрать проект
-dotnet clean
-dotnet build
+2. Установить основной пакет **EF Core**:
+   ```bash
+   dotnet add package Microsoft.EntityFrameworkCore
+   dotnet add package Microsoft.EntityFrameworkCore.Design
+   ```
 
-# добавить пути к библиотекам
-export LD_LIBRARY_PATH=/home/step/PROJECT/web/av/lib/:$LD_LIBRARY_PATH
+3. Установить провайдер для **PostgreSQL**:
+   ```bash
+   dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+   ```
 
-# перед стартом
-export LD_LIBRARY_PATH=$PWD/bin/Debug/net10.0/runtimes/linux-x64/native:$LD_LIBRARY_PATH
+4. Установить инструменты **EF Core** (для миграций):
+   ```bash
+   dotnet tool install --global dotnet-ef
+   dotnet tool update --global dotnet-ef
+   ```
 
-# Запустить проект
-dotnet run
+5. Если пути нет, добавить его в файл конфигурации оболочки:
+   ```bash
+   export PATH="$PATH:$HOME/.dotnet/tools"
+   ```
 
-_________________________
+6. Повторно обновить пакеты:
+   ```bash
+   sudo apt update
+   ```
 
-Трансляция потока RTSP описана в папке test/rtsp
-________________________
+7. Установить **OpenCv**:
+   ```bash
+   dotnet add package OpenCvSharp4
+   dotnet add package OpenCvSharp4.official.runtime.linux-x64
+   ```
+
+8. Установить библиотеку **libopencv**:
+   ```bash
+   sudo apt install libopencv-dev libopencv-videoio-dev
+   ```
+
+9. Дополнительно установить системные зависимости, которые могут отсутствовать:
+   ```bash
+   sudo apt install libatomic1 libgtk-3-0 libgl1 libglib2.0-0
+   sudo apt install ffmpeg
+   ```
+
+10. Установить **PostgreSQL** и пакет расширений **postgresql-contrib**:
+    ```bash
+    sudo apt install postgresql postgresql-contrib -y
+    ```
+
+#### Настройка и запуск PostgreSQL
+
+1. Запустить сервис:
+   ```bash
+   sudo systemctl start postgresql
+   ```
+
+2. Сделать автозапуск сервиса:
+   ```bash
+   sudo systemctl enable postgresql
+   ```
+
+3. Подключиться к **PostgreSQL**:
+   ```bash
+   sudo -u postgres psql
+   ```
+
+4. Задать новый пароль для пользователя `postgres` (значение: `12345`):
+   ```sql
+   ALTER USER postgres WITH PASSWORD '12345';
+   ```
+
+5. Выйти в терминал:
+   ```bash
+   exit
+   ```
+
+#### Миграции, сборка и запуск проекта
+
+1. Создать миграцию (если менялась модель данных для БД):
+   ```bash
+   dotnet ef migrations add NewMigration
+   ```
+
+2. Создать базу данных (предварительно задав пароль для `postgres`):
+   ```bash
+   dotnet ef database update
+   ```
+
+3. Пересобрать проект:
+   ```bash
+   dotnet clean
+   dotnet build
+   ```
+
+4. Добавить пути к библиотекам:
+   ```bash
+   export LD_LIBRARY_PATH=/home/step/PROJECT/web/av/lib/:$LD_LIBRARY_PATH
+   ```
+
+5. Перед стартом задать путь к нативным библиотекам в текущей директории:
+   ```bash
+   export LD_LIBRARY_PATH=$PWD/bin/Debug/net10.0/runtimes/linux-x64/native:$LD_LIBRARY_PATH
+   ```
+
+6. Запустить проект:
+   ```bash
+   dotnet run
+   ```
